@@ -52,7 +52,10 @@ const canShow = (url: string): Promise<boolean> =>
     image.src = url
   })
 
-if (e2e) {
+// Load measurement: the real interface, in a call, with a fake microphone.
+if (e2e?.ui) localStorage.setItem('duo.name', e2e.name)
+
+if (e2e && !e2e.ui) {
   // Automated test: connect straight away, then report the latest measurements to the main process.
   // The fake microphone beeps on and off, so keep the loudest level seen, not the last one.
   let micPeakDb = -100

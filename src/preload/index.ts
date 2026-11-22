@@ -13,6 +13,8 @@ export interface E2EConfig {
   durationMs: number
   /** When set, this instance posts that text with a photo, and saves a note. */
   say: string
+  /** Load measurement: show the real interface instead of reporting and exiting. */
+  ui: boolean
 }
 
 const api = {

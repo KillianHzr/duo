@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, session, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, session, shell, Tray } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { moveData, runBackup } from './backup'
@@ -18,7 +18,8 @@ const e2e = process.env.DUO_E2E_NAME
       enhanced: Boolean(process.env.DUO_E2E_ENHANCED),
       gateDb: process.env.DUO_E2E_GATE ? Number(process.env.DUO_E2E_GATE) : null,
       durationMs: Number(process.env.DUO_E2E_DURATION ?? 8000),
-      say: process.env.DUO_E2E_SAY ?? ''
+      say: process.env.DUO_E2E_SAY ?? '',
+      ui: Boolean(process.env.DUO_E2E_UI)
     }
   : null
 
@@ -27,6 +28,8 @@ if (e2e) {
   app.commandLine.appendSwitch('use-fake-device-for-media-stream')
   app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
   app.commandLine.appendSwitch('mute-audio')
+  // Load measurement: the window sits off screen and must still be drawn as if it were in view.
+  if (e2e.ui) app.commandLine.appendSwitch('disable-features', 'CalculateNativeWinOcclusion')
 }
 
 // Never pop up Electron's error dialog: it would steal focus from a full-screen game.
@@ -177,6 +180,8 @@ function createWindow(): void {
     show: false,
     title: 'Duo',
     icon: makeIcon(64),
+    skipTaskbar: Boolean(e2e?.ui),
+    focusable: !e2e?.ui,
     backgroundColor: '#16171d',
     autoHideMenuBar: true,
     webPreferences: {
@@ -192,6 +197,17 @@ function createWindow(): void {
   mainWindow.once('ready-to-show', () => {
     if (!e2e) {
       if (!startHidden) mainWindow?.show()
+    } else if (e2e.ui) {
+      // Shown for real so it is drawn, but beyond every screen and without taking the focus.
+      const right = Math.max(...screen.getAllDisplays().map((d) => d.bounds.x + d.bounds.width))
+      mainWindow?.setPosition(right + 200, 0)
+      mainWindow?.showInactive()
+      setTimeout(() => {
+        void mainWindow?.webContents
+          .executeJavaScript('document.visibilityState + " " + document.querySelectorAll(".person").length')
+          .then((state) => process.stdout.write(`UI_PROBE ${state}\n`))
+          .finally(() => setTimeout(quit, 500))
+      }, e2e.durationMs)
     } else if (process.env.DUO_E2E_HIDE) {
       // Mimics the app sitting in the tray, to measure its load.
       mainWindow?.showInactive()
@@ -240,7 +256,7 @@ function createTray(): void {
 }
 
 function registerIpc(): void {
-  ipcMain.handle('duo:discover', () => discoverServers())
+  ipcMain.handle('duo:discover', () => (e2e ? [e2e.server] : discoverServers()))
   ipcMain.handle('duo:state', () => appState())
 
   ipcMain.handle('duo:host', async () => {
@@ -404,6 +420,9 @@ if (process.env.DUO_PROBE_UPDATE) {
         dataDir: process.env.DUO_E2E_DATA || undefined
       })
     }
+
+    // Load measurement: every instance joins as a guest, straight into the call screen.
+    if (e2e?.ui) config = { ...DEFAULTS, role: 'guest', code: e2e.code, closeAction: 'tray' }
 
     registerIpc()
     createWindow()

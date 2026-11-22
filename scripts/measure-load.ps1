@@ -1,7 +1,7 @@
 # Measures the CPU and RAM load of two instances in a call (fake microphone, muted output,
 # loopback only, no window shown), broken down by process: main, window, audio, GPU, network.
 # Usage: pwsh scripts/measure-load.ps1 [-Seconds 20] [-Enhanced] [-Gate]   (requires: npm run build)
-param([int]$Seconds = 20, [switch]$Enhanced, [switch]$Gate)
+param([int]$Seconds = 20, [switch]$Enhanced, [switch]$Gate, [switch]$Ui)
 
 $root = Split-Path $PSScriptRoot -Parent
 $electron = Join-Path $root 'node_modules\electron\dist\electron.exe'
@@ -19,16 +19,19 @@ function Start-Instance($name, [switch]$HostIt) {
   $env:DUO_E2E_DATA = if ($HostIt) { Join-Path $data 'data' } else { $null }
   $env:DUO_E2E_ENHANCED = if ($Enhanced) { '1' } else { $null }
   $env:DUO_E2E_GATE = if ($Gate) { '-60' } else { $null }
+  # -Ui draws the real interface, in a window placed beyond the screens.
+  $env:DUO_E2E_UI = if ($Ui) { '1' } else { $null }
+  $out = Join-Path $env:TEMP "duo-load-$name-$PID.txt"
   $env:ELECTRON_RUN_AS_NODE = $null
   $started = Get-Date
-  $process = Start-Process $electron -ArgumentList '.' -WorkingDirectory $root -PassThru -WindowStyle Hidden
-  [pscustomobject]@{ Process = $process; Data = $data; Started = $started }
+  $process = Start-Process $electron -ArgumentList '.' -WorkingDirectory $root -PassThru -WindowStyle Hidden -RedirectStandardOutput $out
+  [pscustomobject]@{ Process = $process; Data = $data; Started = $started; Out = $out }
 }
 
 $instances = @((Start-Instance 'Alice' -HostIt))
 Start-Sleep 3
 $instances += Start-Instance 'Bob'
-foreach ($name in 'DUO_E2E_NAME', 'DUO_E2E_SERVER', 'DUO_E2E_CODE', 'DUO_E2E_DURATION', 'DUO_E2E_USERDATA', 'DUO_E2E_HOST_PORT', 'DUO_E2E_DATA', 'DUO_E2E_ENHANCED', 'DUO_E2E_GATE') {
+foreach ($name in 'DUO_E2E_NAME', 'DUO_E2E_SERVER', 'DUO_E2E_CODE', 'DUO_E2E_DURATION', 'DUO_E2E_USERDATA', 'DUO_E2E_HOST_PORT', 'DUO_E2E_DATA', 'DUO_E2E_ENHANCED', 'DUO_E2E_GATE', 'DUO_E2E_UI') {
   Remove-Item "env:$name" -ErrorAction SilentlyContinue
 }
 
@@ -68,5 +71,7 @@ foreach ($kind in 'main', 'window', 'audio', 'gpu', 'network', 'other') {
 foreach ($instance in $instances) {
   $instance.Process.WaitForExit(40000) | Out-Null
   if (-not $instance.Process.HasExited) { Stop-Process -Id $instance.Process.Id -Force -ErrorAction SilentlyContinue }
+  Get-Content $instance.Out -ErrorAction SilentlyContinue | Select-String 'UI_PROBE'
+  Remove-Item $instance.Out -ErrorAction SilentlyContinue
   Remove-Item $instance.Data -Recurse -Force -ErrorAction SilentlyContinue
 }
