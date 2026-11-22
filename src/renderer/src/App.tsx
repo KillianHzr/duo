@@ -344,11 +344,13 @@ function Main({ engine }: { engine: VoiceEngine }) {
             onChange={(autoGainControl) => void engine.updateSettings({ autoGainControl })}
           />
           <Toggle label={t('showStats')} checked={showStats} onChange={setShowStats} />
-          <Toggle
-            label={t('autostart')}
-            checked={app.autostart}
-            onChange={(enabled) => void window.duo.setAutostart(enabled).then(setApp)}
-          />
+          {!app.store && (
+            <Toggle
+              label={t('autostart')}
+              checked={app.autostart}
+              onChange={(enabled) => void window.duo.setAutostart(enabled).then(setApp)}
+            />
+          )}
           <label>
             {t('closeSetting')}
             <select

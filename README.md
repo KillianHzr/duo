@@ -27,6 +27,10 @@ Download the latest installer from the [Releases page](https://github.com/Killia
   warning: choose *More info → Run anyway*.
 - **Linux**: `Duo-<version>-linux-x86_64.AppImage`. Make it executable, then run it.
 
+On Windows 11 computers where **Smart App Control** is on, Windows blocks unsigned apps, including this
+installer and its updates, and offers no per-app exception. A Microsoft Store version, which Windows
+trusts, is in preparation.
+
 ## Use
 
 1. On the computer that stays on, open Duo and choose **Host on this computer**. Duo shows a 6-character
@@ -67,9 +71,14 @@ npm run dev          # run the app with hot reload
 npm test             # type check, server tests, microphone gate tests
 npm run build && npm run test:voice   # five hidden app instances, fake microphone, muted output
 npm run dist         # build an installer into dist/
+npm run dist:store   # build the Microsoft Store package (Windows only)
 ```
 
 Releases are built by GitHub Actions when a `v*` tag is pushed.
+
+## Privacy
+
+Duo collects nothing and your voice never leaves your network. See the [privacy policy](PRIVACY.md).
 
 ## License
 

@@ -17,7 +17,8 @@ export const getUpdateStatus = (): UpdateStatus => status
  * installs it when the app quits (or right away if the user asks).
  */
 export function startAutoUpdate(getWindow: () => BrowserWindow | null): void {
-  if (!app.isPackaged) return
+  // The Microsoft Store updates its own packages; our updater must stay out of the way there.
+  if (!app.isPackaged || process.windowsStore) return
 
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true

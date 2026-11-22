@@ -37,6 +37,9 @@ process.on('unhandledRejection', onFatal)
 // The other person's voice must start playing without a click in the window first.
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required')
 
+/** True when installed from the Microsoft Store, which handles updates and startup itself. */
+const isStore = process.windowsStore === true
+
 /** Set when launched at login: start straight in the tray. */
 const startHidden = process.argv.includes('--hidden')
 
@@ -55,6 +58,8 @@ export interface AppState {
   hostError: string | null
   version: string
   autostart: boolean
+  /** Store builds hide what the Store manages: updates and start with the computer. */
+  store: boolean
 }
 
 function appState(): AppState {
@@ -64,7 +69,8 @@ function appState(): AppState {
     closeAction: config.closeAction,
     hostError,
     version: app.getVersion(),
-    autostart: app.isPackaged && app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin
+    autostart: app.isPackaged && !isStore && app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin,
+    store: isStore
   }
 }
 
@@ -208,7 +214,7 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('duo:set-autostart', (_event, enabled: boolean) => {
-    if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: Boolean(enabled), args: ['--hidden'] })
+    if (app.isPackaged && !isStore) app.setLoginItemSettings({ openAtLogin: Boolean(enabled), args: ['--hidden'] })
     return appState()
   })
 

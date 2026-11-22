@@ -22,7 +22,8 @@
     "test:gate": "node scripts/test-gate.mjs",
     "test:voice": "node scripts/e2e-voice.mjs",
     "icon": "node scripts/make-icon.mjs",
-    "dist": "electron-vite build && electron-builder --publish never"
+    "dist": "electron-vite build && electron-builder --publish never",
+    "dist:store": "electron-vite build && electron-builder --win appx --publish never"
   },
   "build": {
     "appId": "io.github.killianhzr.duo",
@@ -51,6 +52,18 @@
     "linux": {
       "target": "AppImage",
       "category": "Network"
+    },
+    "appx": {
+      "identityName": "KillianHzr.Duo",
+      "publisher": "CN=REPLACE-WITH-PARTNER-CENTER-PUBLISHER-ID",
+      "publisherDisplayName": "KillianHzr",
+      "applicationId": "Duo",
+      "displayName": "Duo",
+      "languages": [
+        "en-US",
+        "fr-FR"
+      ],
+      "backgroundColor": "#16171d"
     }
   },
   "dependencies": {
