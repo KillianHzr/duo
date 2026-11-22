@@ -10,6 +10,8 @@ export interface E2EConfig {
   enhanced: boolean
   gateDb: number | null
   durationMs: number
+  /** When set, this instance posts that text with a photo, and saves a note. */
+  say: string
 }
 
 const api = {
@@ -31,6 +33,20 @@ const api = {
   closeChoice: (action: 'tray' | 'quit', remember: boolean): void =>
     ipcRenderer.send('duo:close-choice', action, remember),
   setCloseAction: (action: CloseAction): Promise<AppState> => ipcRenderer.invoke('duo:set-close-action', action),
+
+  /** Host only: pick the folder that holds messages, notes and media (existing data is copied over). */
+  chooseDataDir: (): Promise<AppState> => ipcRenderer.invoke('duo:choose-data-dir'),
+  chooseBackupDir: (): Promise<AppState> => ipcRenderer.invoke('duo:choose-backup-dir'),
+  disableBackup: (): Promise<AppState> => ipcRenderer.invoke('duo:disable-backup'),
+  backupNow: (): Promise<AppState> => ipcRenderer.invoke('duo:backup-now'),
+  /** Fires when something changed in the background (a scheduled backup finished). */
+  onStateChanged: (listener: (state: AppState) => void): (() => void) => {
+    const handler = (_event: unknown, state: AppState): void => listener(state)
+    ipcRenderer.on('duo:state-changed', handler)
+    return () => ipcRenderer.removeListener('duo:state-changed', handler)
+  },
+  /** Saves a file from the chat to a place the user picks. */
+  download: (url: string): void => ipcRenderer.send('duo:download', url),
 
   getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('duo:update-status'),
   onUpdateStatus: (listener: (status: UpdateStatus) => void): (() => void) => {

@@ -9,11 +9,22 @@ export interface DuoConfig {
   code: string
   /** What the window's close button does: ask each time, hide to the tray, or quit. */
   closeAction: CloseAction
+  /** Host only: folder for messages, notes and media. Empty means the app's own data folder. */
+  dataDir: string
+  /** Host only: folder that receives a daily copy of the data. Empty means no backup. */
+  backupDir: string
+  lastBackup: BackupResult | null
 }
 
 export type CloseAction = 'ask' | 'tray' | 'quit'
 
-const DEFAULTS: DuoConfig = { role: null, code: '', closeAction: 'ask' }
+export interface BackupResult {
+  at: number
+  /** Null when the backup went through. */
+  error: string | null
+}
+
+export const DEFAULTS: DuoConfig = { role: null, code: '', closeAction: 'ask', dataDir: '', backupDir: '', lastBackup: null }
 
 const file = (): string => join(app.getPath('userData'), 'config.json')
 

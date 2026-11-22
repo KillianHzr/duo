@@ -1,7 +1,9 @@
-import { app, BrowserWindow, ipcMain, Menu, nativeImage, session, shell, Tray } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, session, shell, Tray } from 'electron'
+import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
+import { moveData, runBackup } from './backup'
 import { discoverServers } from './discovery'
-import { loadConfig, saveConfig, type CloseAction, type DuoConfig } from './config'
+import { DEFAULTS, loadConfig, saveConfig, type BackupResult, type CloseAction, type DuoConfig } from './config'
 import { getUpdateStatus, installUpdateNow, probeUpdate, startAutoUpdate } from './updater'
 import { generateCode, startDuoServer, type DuoServer } from '../server/duo-server'
 import { DUO_PORT, normalizeCode } from '../shared/protocol'
@@ -14,7 +16,8 @@ const e2e = process.env.DUO_E2E_NAME
       code: process.env.DUO_E2E_CODE ?? '',
       enhanced: Boolean(process.env.DUO_E2E_ENHANCED),
       gateDb: process.env.DUO_E2E_GATE ? Number(process.env.DUO_E2E_GATE) : null,
-      durationMs: Number(process.env.DUO_E2E_DURATION ?? 8000)
+      durationMs: Number(process.env.DUO_E2E_DURATION ?? 8000),
+      say: process.env.DUO_E2E_SAY ?? ''
     }
   : null
 
@@ -46,7 +49,7 @@ const startHidden = process.argv.includes('--hidden')
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
-let config: DuoConfig = { role: null, code: '', closeAction: 'ask' }
+let config: DuoConfig = { ...DEFAULTS }
 let server: DuoServer | null = null
 let hostError: string | null = null
 
@@ -60,10 +63,20 @@ export interface AppState {
   autostart: boolean
   /** Store builds hide what the Store manages: updates and start with the computer. */
   store: boolean
+  /** Host only: where messages, notes and media are kept. */
+  dataDir: string
+  /** Host only: folder receiving the daily copy, or '' when backups are off. */
+  backupDir: string
+  lastBackup: BackupResult | null
 }
+
+const dataDir = (): string => config.dataDir || join(app.getPath('userData'), 'data')
 
 function appState(): AppState {
   return {
+    dataDir: dataDir(),
+    backupDir: config.backupDir,
+    lastBackup: config.lastBackup,
     role: config.role,
     code: config.code,
     closeAction: config.closeAction,
@@ -78,11 +91,42 @@ async function startHosting(): Promise<void> {
   if (server) return
   hostError = null
   try {
-    server = await startDuoServer({ code: config.code, port: DUO_PORT })
+    mkdirSync(dataDir(), { recursive: true })
+    server = await startDuoServer({ code: config.code, port: DUO_PORT, dataDir: dataDir() })
   } catch (err) {
     const error = err as NodeJS.ErrnoException
     hostError = error.code === 'EADDRINUSE' ? 'port-in-use' : error.message
   }
+}
+
+let backingUp = false
+
+/** Copies the data folder to the backup folder and remembers how it went. */
+async function backupNow(): Promise<void> {
+  if (backingUp || !config.backupDir) return
+  backingUp = true
+  let error: string | null = null
+  try {
+    await runBackup(dataDir(), config.backupDir)
+  } catch (err) {
+    error = err instanceof Error ? err.message : String(err)
+  }
+  backingUp = false
+  config = { ...config, lastBackup: { at: Date.now(), error } }
+  saveConfig(config)
+  mainWindow?.webContents.send('duo:state-changed', appState())
+}
+
+const BACKUP_HOUR = 3
+
+/** Once a day, at night if the computer is on, otherwise the next time the app runs. */
+function backupIfDue(): void {
+  if (config.role !== 'host' || !config.backupDir) return
+  const now = new Date()
+  // The "backup day" starts at 3 in the morning.
+  const day = (date: Date): string => new Date(date.getTime() - BACKUP_HOUR * 3_600_000).toDateString()
+  if (config.lastBackup && day(new Date(config.lastBackup.at)) === day(now)) return
+  void backupNow()
 }
 
 async function stopHosting(): Promise<void> {
@@ -166,6 +210,8 @@ function createWindow(): void {
     if (url.startsWith('https://') || url.startsWith('http://')) void shell.openExternal(url)
     return { action: 'deny' }
   })
+  // The window only ever shows the app itself.
+  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault())
 
   if (process.env.ELECTRON_RENDERER_URL) {
     void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -239,6 +285,52 @@ function registerIpc(): void {
     else mainWindow?.hide()
   })
 
+  const chooseFolder = async (): Promise<string | null> => {
+    if (!mainWindow) return null
+    const result = await dialog.showOpenDialog(mainWindow, { properties: ['openDirectory', 'createDirectory'] })
+    return result.canceled ? null : (result.filePaths[0] ?? null)
+  }
+
+  ipcMain.handle('duo:choose-data-dir', async () => {
+    const chosen = await chooseFolder()
+    if (!chosen || chosen === dataDir()) return appState()
+    const previous = dataDir()
+    await stopHosting()
+    await moveData(previous, chosen)
+    config = { ...config, dataDir: chosen }
+    saveConfig(config)
+    if (config.role === 'host') await startHosting()
+    return appState()
+  })
+
+  ipcMain.handle('duo:choose-backup-dir', async () => {
+    const chosen = await chooseFolder()
+    if (chosen) {
+      config = { ...config, backupDir: chosen, lastBackup: null }
+      saveConfig(config)
+      await backupNow()
+    }
+    return appState()
+  })
+
+  ipcMain.handle('duo:disable-backup', () => {
+    config = { ...config, backupDir: '', lastBackup: null }
+    saveConfig(config)
+    return appState()
+  })
+
+  ipcMain.handle('duo:backup-now', async () => {
+    await backupNow()
+    return appState()
+  })
+
+  // Saving a file from the chat: only ever from a host's media address.
+  ipcMain.on('duo:download', (_event, url: unknown) => {
+    if (typeof url === 'string' && /^http:\/\/[^/]+\/media\/[a-f0-9]{24}\?/.test(url)) {
+      mainWindow?.webContents.downloadURL(url)
+    }
+  })
+
   ipcMain.handle('duo:update-status', () => getUpdateStatus())
   ipcMain.on('duo:install-update', () => {
     quitting = true
@@ -281,7 +373,12 @@ if (process.env.DUO_PROBE_UPDATE) {
     } else if (process.env.DUO_E2E_HOST_PORT) {
       // Test: this instance hosts the server itself, like a real host would.
       // Loopback only, so no firewall prompt can appear during a test run.
-      server = await startDuoServer({ code: e2e.code, port: Number(process.env.DUO_E2E_HOST_PORT), host: '127.0.0.1' })
+      server = await startDuoServer({
+        code: e2e.code,
+        port: Number(process.env.DUO_E2E_HOST_PORT),
+        host: '127.0.0.1',
+        dataDir: process.env.DUO_E2E_DATA || undefined
+      })
     }
 
     registerIpc()
@@ -289,6 +386,8 @@ if (process.env.DUO_PROBE_UPDATE) {
     if (!e2e) {
       createTray()
       startAutoUpdate(() => mainWindow)
+      setTimeout(backupIfDue, 60_000)
+      setInterval(backupIfDue, 10 * 60_000)
     }
   })
 

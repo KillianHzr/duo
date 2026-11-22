@@ -178,6 +178,19 @@ export class VoiceEngine {
   private graph: { nodes: AudioNode[]; gate: AudioWorkletNode; monitor: GainNode; rnnoise: RnnoiseWorkletNode | null } | null =
     null
 
+  /** The chat and the notes travel over the same connection: they get every message from the host. */
+  onServerMessage: ((message: ServerMessage) => void) | null = null
+  onDisconnected: (() => void) | null = null
+
+  /** HTTP address of the host we are connected to (media files are fetched from it). */
+  httpBase(): string {
+    return this.url.replace(/^ws/, 'http').replace(/\/+$/, '')
+  }
+
+  sendToServer(message: ClientMessage): void {
+    this.send(message)
+  }
+
   constructor(settings: VoiceSettings) {
     this.settings = { ...settings }
     this.snapshot = this.buildSnapshot()
@@ -561,9 +574,12 @@ export class VoiceEngine {
         return
       }
       void this.handleMessage(message)
+      this.onServerMessage?.(message)
     }
 
     ws.onclose = () => {
+      // A socket replaced by a newer one must not make the chat believe the new one dropped.
+      if (this.ws === ws || this.ws === null) this.onDisconnected?.()
       if (this.ws !== ws) return
       this.ws = null
       this.selfId = null

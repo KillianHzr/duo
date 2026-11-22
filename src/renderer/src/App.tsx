@@ -2,7 +2,12 @@ import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent 
 import { CODE_LENGTH, DUO_PORT, normalizeCode } from '../../shared/protocol'
 import type { AppState, CloseAction, UpdateStatus } from '../../preload/index'
 import { t, type MessageKey } from './i18n'
+import { Chat } from './Chat'
+import { Notes } from './Notes'
+import type { Space } from './space'
 import type { PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
+
+type Tab = 'voice' | 'chat' | 'notes'
 
 const GATE_MIN_DB = -80
 const GATE_MAX_DB = -10
@@ -25,10 +30,10 @@ function errorText(error: VoiceError): string {
   return t(byReason[error.reason])
 }
 
-export function App({ engine }: { engine: VoiceEngine }) {
+export function App({ engine, space }: { engine: VoiceEngine; space: Space }) {
   return (
     <>
-      <Main engine={engine} />
+      <Main engine={engine} space={space} />
       <ClosePrompt />
     </>
   )
@@ -75,8 +80,10 @@ function ClosePrompt() {
   )
 }
 
-function Main({ engine }: { engine: VoiceEngine }) {
+function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   const voice = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
+  const shared = useSyncExternalStore(space.subscribe, space.getSnapshot)
+  const [tab, setTab] = useState<Tab>('voice')
   const [app, setApp] = useState<AppState | null>(null)
   const [name, setName] = useState(() => localStorage.getItem('duo.name') ?? '')
   const [notFound, setNotFound] = useState(false)
@@ -90,7 +97,12 @@ function Main({ engine }: { engine: VoiceEngine }) {
   useEffect(() => {
     void window.duo.getState().then(setApp)
     void window.duo.getUpdateStatus().then(setUpdate)
-    return window.duo.onUpdateStatus(setUpdate)
+    const stopUpdates = window.duo.onUpdateStatus(setUpdate)
+    const stopState = window.duo.onStateChanged(setApp)
+    return () => {
+      stopUpdates()
+      stopState()
+    }
   }, [])
 
   const role = app?.role ?? null
@@ -235,7 +247,29 @@ function Main({ engine }: { engine: VoiceEngine }) {
       )}
       {voice.error && <div className="error">{errorText(voice.error)}</div>}
 
-      <section className="people">
+      {(shared.available || tab !== 'voice') && (
+        <nav className="tabs">
+          {(['voice', 'chat', 'notes'] as const).map((id) => (
+            <button
+              key={id}
+              className={tab === id ? 'tab active' : 'tab'}
+              aria-pressed={tab === id}
+              onClick={() => {
+                setTab(id)
+                setShowSettings(false)
+              }}
+            >
+              {t(id === 'voice' ? 'tabVoice' : id === 'chat' ? 'tabChat' : 'tabNotes')}
+              {id === 'chat' && shared.unread > 0 && <span className="badge">{shared.unread}</span>}
+            </button>
+          ))}
+        </nav>
+      )}
+
+      {tab === 'chat' && !showSettings && <Chat space={space} self={name} />}
+      {tab === 'notes' && !showSettings && <Notes space={space} self={name} />}
+
+      <section className="people" hidden={tab !== 'voice'}>
         <Person
           name={`${name} (${t('you')})`}
           level={voice.muted || !sending ? 0 : dbToLevel(voice.micDb)}
@@ -254,8 +288,9 @@ function Main({ engine }: { engine: VoiceEngine }) {
       </section>
 
       {showSettings && (
-        <section className="panel">
+        <section className={tab === 'voice' ? 'panel' : 'panel full'}>
           {role === 'host' && <AccessCode code={code} />}
+          {role === 'host' && <Storage app={app} onChange={setApp} />}
           <label>
             {t('microphone')}
             <select
@@ -452,6 +487,60 @@ function CodeForm(props: { error: string | null; onSubmit: (code: string) => voi
         {t('back')}
       </button>
     </form>
+  )
+}
+
+/** Host only: where the shared data lives, and its daily copy. */
+function Storage({ app, onChange }: { app: AppState; onChange: (state: AppState) => void }) {
+  const [busy, setBusy] = useState(false)
+  const run = (action: () => Promise<AppState>): void => {
+    setBusy(true)
+    void action()
+      .then(onChange)
+      .finally(() => setBusy(false))
+  }
+  const last = app.lastBackup
+  const status = !last
+    ? t('backupNever')
+    : last.error
+      ? t('backupFailed', { error: last.error })
+      : t('backupLast', { date: new Date(last.at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) })
+  return (
+    <div className="storage">
+      <span className="muted small">{t('dataFolder')}</span>
+      <div className="row">
+        <code className="path">{app.dataDir}</code>
+        <button disabled={busy} onClick={() => run(window.duo.chooseDataDir)}>
+          {t('change')}
+        </button>
+      </div>
+      <span className="muted small">
+        {t('backup')} — {t('backupHint')}
+      </span>
+      {app.backupDir ? (
+        <>
+          <div className="row">
+            <code className="path">{app.backupDir}</code>
+            <button disabled={busy} onClick={() => run(window.duo.chooseBackupDir)}>
+              {t('change')}
+            </button>
+          </div>
+          <span className={last?.error ? 'small warn' : 'muted small'}>{status}</span>
+          <div className="row">
+            <button disabled={busy} onClick={() => run(window.duo.backupNow)}>
+              {t('backupNow')}
+            </button>
+            <button className="ghost" disabled={busy} onClick={() => run(window.duo.disableBackup)}>
+              {t('backupDisable')}
+            </button>
+          </div>
+        </>
+      ) : (
+        <button disabled={busy} onClick={() => run(window.duo.chooseBackupDir)}>
+          {t('backupChoose')}
+        </button>
+      )}
+    </div>
   )
 }
 

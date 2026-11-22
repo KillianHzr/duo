@@ -6,6 +6,7 @@
  *   Carol  joins with the sensitivity gate set under her microphone level, so she is heard
  *   Dave   joins with the gate set above his microphone level, so he stays silent
  *   Eve    tries to join with a wrong access code
+ * Bob also posts a chat message with a photo and saves a shared note, kept by Alice.
  * Requires `npm run build` first.
  */
 import { spawn } from 'node:child_process'
@@ -22,7 +23,7 @@ const DURATION = Number(process.env.DUO_E2E_DURATION ?? 9000)
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
-function runClient(name, { code = CODE, host = false, enhanced = false, gateDb = null } = {}) {
+function runClient(name, { code = CODE, host = false, enhanced = false, gateDb = null, say = '' } = {}) {
   const userData = mkdtempSync(join(tmpdir(), 'duo-e2e-'))
   return new Promise((resolve) => {
     const env = {
@@ -34,7 +35,11 @@ function runClient(name, { code = CODE, host = false, enhanced = false, gateDb =
       DUO_E2E_DURATION: String(host ? DURATION + 4000 : DURATION),
       DUO_E2E_USERDATA: userData
     }
-    if (host) env.DUO_E2E_HOST_PORT = String(PORT)
+    if (host) {
+      env.DUO_E2E_HOST_PORT = String(PORT)
+      env.DUO_E2E_DATA = join(userData, 'data')
+    }
+    if (say) env.DUO_E2E_SAY = say
     if (enhanced) env.DUO_E2E_ENHANCED = '1'
     if (gateDb !== null) env.DUO_E2E_GATE = String(gateDb)
     delete env.ELECTRON_RUN_AS_NODE
@@ -66,7 +71,7 @@ const hosting = runClient('Alice', { host: true })
 await wait(2500)
 const [alice, bob, carol, dave, eve] = await Promise.all([
   hosting,
-  runClient('Bob', { enhanced: true }),
+  runClient('Bob', { enhanced: true, say: 'hello from Bob' }),
   runClient('Carol', { gateDb: -60 }),
   runClient('Dave', { gateDb: -5 }),
   runClient('Eve', { code: 'WRONG1' })
@@ -104,6 +109,18 @@ check(dave?.micPeakDb > -60, `Dave: the gate still measures his microphone while
 check(dave?.gateOpen === false, 'Dave: gate closed, his level is under the -5 dB threshold')
 check(heard('Alice', 'Dave') === 0, `Alice hears pure silence from Dave (energy ${num(heard('Alice', 'Dave'), 5)})`)
 check(heard('Dave', 'Alice') > 0, `Dave still hears Alice (energy ${num(heard('Dave', 'Alice'), 5)})`)
+
+console.log('\nChat and notes')
+check(bob?.chat?.sent === true, 'Bob: message and photo sent to the host')
+for (const [who, report] of Object.entries(reports)) {
+  const message = report?.chat?.messages.at(-1)
+  const file = message?.files[0]
+  check(report?.chat?.available === true, `${who}: chat available`)
+  check(message?.from === 'Bob' && message?.text === 'hello from Bob', `${who}: has Bob's message`)
+  check(file?.mime === 'image/png' && file?.width === 1200 && Boolean(file?.thumb), `${who}: the photo comes with its size and a preview`)
+  check(report?.chat?.photoShown === true && report?.chat?.previewShown === true, `${who}: photo and preview can be displayed`)
+  check(report?.chat?.notes[0]?.title === 'hello from Bob' && report?.chat?.notes[0]?.by === 'Bob', `${who}: has Bob's note`)
+}
 
 console.log('\nEve (wrong code):', JSON.stringify(eve))
 check(
