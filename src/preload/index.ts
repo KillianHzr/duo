@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { AppState } from '../main/index'
+import type { CloseAction } from '../main/config'
 import type { UpdateStatus } from '../main/updater'
 
 export interface E2EConfig {
@@ -21,6 +22,16 @@ const api = {
   resetRole: (): Promise<AppState> => ipcRenderer.invoke('duo:reset-role'),
   setAutostart: (enabled: boolean): Promise<AppState> => ipcRenderer.invoke('duo:set-autostart', enabled),
 
+  /** Fires when the user clicks the window's close button and has not picked a default yet. */
+  onCloseRequested: (listener: () => void): (() => void) => {
+    const handler = (): void => listener()
+    ipcRenderer.on('duo:close-requested', handler)
+    return () => ipcRenderer.removeListener('duo:close-requested', handler)
+  },
+  closeChoice: (action: 'tray' | 'quit', remember: boolean): void =>
+    ipcRenderer.send('duo:close-choice', action, remember),
+  setCloseAction: (action: CloseAction): Promise<AppState> => ipcRenderer.invoke('duo:set-close-action', action),
+
   getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('duo:update-status'),
   onUpdateStatus: (listener: (status: UpdateStatus) => void): (() => void) => {
     const handler = (_event: unknown, status: UpdateStatus): void => listener(status)
@@ -34,6 +45,6 @@ const api = {
 }
 
 export type DuoApi = typeof api
-export type { AppState, UpdateStatus }
+export type { AppState, CloseAction, UpdateStatus }
 
 contextBridge.exposeInMainWorld('duo', api)

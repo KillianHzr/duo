@@ -7,9 +7,13 @@ export interface DuoConfig {
   role: 'host' | 'guest' | null
   /** Access code: generated when hosting, typed in when joining. */
   code: string
+  /** What the window's close button does: ask each time, hide to the tray, or quit. */
+  closeAction: CloseAction
 }
 
-const DEFAULTS: DuoConfig = { role: null, code: '' }
+export type CloseAction = 'ask' | 'tray' | 'quit'
+
+const DEFAULTS: DuoConfig = { role: null, code: '', closeAction: 'ask' }
 
 const file = (): string => join(app.getPath('userData'), 'config.json')
 

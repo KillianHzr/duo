@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
 import { CODE_LENGTH, DUO_PORT, normalizeCode } from '../../shared/protocol'
-import type { AppState, UpdateStatus } from '../../preload/index'
+import type { AppState, CloseAction, UpdateStatus } from '../../preload/index'
 import { t, type MessageKey } from './i18n'
 import type { PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
 
@@ -26,6 +26,56 @@ function errorText(error: VoiceError): string {
 }
 
 export function App({ engine }: { engine: VoiceEngine }) {
+  return (
+    <>
+      <Main engine={engine} />
+      <ClosePrompt />
+    </>
+  )
+}
+
+/** Asks what the close button should do, until the user picks a default. */
+function ClosePrompt() {
+  const [open, setOpen] = useState(false)
+  const [remember, setRemember] = useState(false)
+
+  useEffect(() => window.duo.onCloseRequested(() => setOpen(true)), [])
+  useEffect(() => {
+    if (!open) return
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
+  if (!open) return null
+  const choose = (action: 'tray' | 'quit'): void => {
+    setOpen(false)
+    window.duo.closeChoice(action, remember)
+  }
+  return (
+    <div className="overlay" onClick={() => setOpen(false)}>
+      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="close-title" onClick={(e) => e.stopPropagation()}>
+        <h1 id="close-title">{t('closeTitle')}</h1>
+        <button className="choice" autoFocus onClick={() => choose('tray')}>
+          <strong>{t('closeToTray')}</strong>
+          <span className="muted small">{t('closeToTrayHint')}</span>
+        </button>
+        <button className="choice" onClick={() => choose('quit')}>
+          <strong>{t('closeQuit')}</strong>
+          <span className="muted small">{t('closeQuitHint')}</span>
+        </button>
+        <Toggle label={t('closeRemember')} checked={remember} onChange={setRemember} />
+        <button className="ghost" onClick={() => setOpen(false)}>
+          {t('cancel')}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function Main({ engine }: { engine: VoiceEngine }) {
   const voice = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
   const [app, setApp] = useState<AppState | null>(null)
   const [name, setName] = useState(() => localStorage.getItem('duo.name') ?? '')
@@ -299,6 +349,17 @@ export function App({ engine }: { engine: VoiceEngine }) {
             checked={app.autostart}
             onChange={(enabled) => void window.duo.setAutostart(enabled).then(setApp)}
           />
+          <label>
+            {t('closeSetting')}
+            <select
+              value={app.closeAction}
+              onChange={(event) => void window.duo.setCloseAction(event.target.value as CloseAction).then(setApp)}
+            >
+              <option value="ask">{t('closeAsk')}</option>
+              <option value="tray">{t('closeToTray')}</option>
+              <option value="quit">{t('closeQuit')}</option>
+            </select>
+          </label>
           <div className="row">
             <button
               className="ghost"

@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain, Menu, nativeImage, session, shell, Tray } from 'electron'
 import { join } from 'node:path'
 import { discoverServers } from './discovery'
-import { loadConfig, saveConfig, type DuoConfig } from './config'
+import { loadConfig, saveConfig, type CloseAction, type DuoConfig } from './config'
 import { getUpdateStatus, installUpdateNow, probeUpdate, startAutoUpdate } from './updater'
 import { generateCode, startDuoServer, type DuoServer } from '../server/duo-server'
 import { DUO_PORT, normalizeCode } from '../shared/protocol'
@@ -43,13 +43,14 @@ const startHidden = process.argv.includes('--hidden')
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
-let config: DuoConfig = { role: null, code: '' }
+let config: DuoConfig = { role: null, code: '', closeAction: 'ask' }
 let server: DuoServer | null = null
 let hostError: string | null = null
 
 export interface AppState {
   role: DuoConfig['role']
   code: string
+  closeAction: CloseAction
   /** Why hosting failed ('port-in-use' or a raw message), or null. */
   hostError: string | null
   version: string
@@ -60,6 +61,7 @@ function appState(): AppState {
   return {
     role: config.role,
     code: config.code,
+    closeAction: config.closeAction,
     hostError,
     version: app.getVersion(),
     autostart: app.isPackaged && app.getLoginItemSettings({ args: ['--hidden'] }).openAtLogin
@@ -142,13 +144,16 @@ function createWindow(): void {
     }
   })
 
-  // Closing the window sends it to the tray: the call goes on, and a hidden
-  // window draws nothing (no load while a game is running).
+  // The close button either hides the window to the tray (the call goes on, and a hidden
+  // window draws nothing), quits for good, or asks which of the two the user wants.
   mainWindow.on('close', (event) => {
-    if (!quitting && !e2e) {
-      event.preventDefault()
-      mainWindow?.hide()
-    }
+    if (quitting || e2e) return
+    if (config.closeAction === 'quit') return quit()
+    event.preventDefault()
+    // If the page cannot show the question (still loading, crashed), hiding is the safe default.
+    const canAsk = mainWindow && !mainWindow.webContents.isLoading() && !mainWindow.webContents.isCrashed()
+    if (config.closeAction === 'tray' || !canAsk) mainWindow?.hide()
+    else mainWindow?.webContents.send('duo:close-requested')
   })
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -182,7 +187,7 @@ function registerIpc(): void {
   ipcMain.handle('duo:state', () => appState())
 
   ipcMain.handle('duo:host', async () => {
-    config = { role: 'host', code: config.role === 'host' && config.code ? config.code : generateCode() }
+    config = { ...config, role: 'host', code: config.role === 'host' && config.code ? config.code : generateCode() }
     saveConfig(config)
     await startHosting()
     return appState()
@@ -190,14 +195,14 @@ function registerIpc(): void {
 
   ipcMain.handle('duo:join', async (_event, code: string) => {
     await stopHosting()
-    config = { role: 'guest', code: normalizeCode(String(code ?? '')) }
+    config = { ...config, role: 'guest', code: normalizeCode(String(code ?? '')) }
     saveConfig(config)
     return appState()
   })
 
   ipcMain.handle('duo:reset-role', async () => {
     await stopHosting()
-    config = { role: null, code: '' }
+    config = { ...config, role: null, code: '' }
     saveConfig(config)
     return appState()
   })
@@ -205,6 +210,27 @@ function registerIpc(): void {
   ipcMain.handle('duo:set-autostart', (_event, enabled: boolean) => {
     if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: Boolean(enabled), args: ['--hidden'] })
     return appState()
+  })
+
+  const isCloseAction = (value: unknown): value is CloseAction => value === 'ask' || value === 'tray' || value === 'quit'
+
+  ipcMain.handle('duo:set-close-action', (_event, action: unknown) => {
+    if (isCloseAction(action)) {
+      config = { ...config, closeAction: action }
+      saveConfig(config)
+    }
+    return appState()
+  })
+
+  // Answer to the "close or keep running?" question shown by the window.
+  ipcMain.on('duo:close-choice', (_event, action: unknown, remember: unknown) => {
+    if (action !== 'tray' && action !== 'quit') return
+    if (remember === true) {
+      config = { ...config, closeAction: action }
+      saveConfig(config)
+    }
+    if (action === 'quit') quit()
+    else mainWindow?.hide()
   })
 
   ipcMain.handle('duo:update-status', () => getUpdateStatus())

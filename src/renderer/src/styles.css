@@ -378,6 +378,27 @@ input.code-input {
   text-transform: uppercase;
 }
 
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgb(0 0 0 / 60%);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 340px;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--bg);
+  border: 1px solid var(--panel-2);
+}
+
 footer {
   display: grid;
   grid-template-columns: 1fr 1fr;
