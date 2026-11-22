@@ -67,6 +67,8 @@ const api = {
     return () => ipcRenderer.removeListener('duo:update-status', handler)
   },
   installUpdate: (): void => ipcRenderer.send('duo:install-update'),
+  /** Opens the download page, for computers that refuse automatic updates. */
+  openReleases: (): void => ipcRenderer.send('duo:open-releases'),
 
   e2e: ipcRenderer.sendSync('duo:e2e-config') as E2EConfig | null,
   e2eReport: (report: unknown): void => ipcRenderer.send('duo:e2e-report', report)

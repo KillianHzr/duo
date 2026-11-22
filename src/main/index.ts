@@ -5,7 +5,7 @@ import { moveData, runBackup } from './backup'
 import { discoverServers } from './discovery'
 import { setPushToTalk, stopPushToTalk } from './ptt'
 import { DEFAULTS, loadConfig, saveConfig, type BackupResult, type CloseAction, type DuoConfig } from './config'
-import { getUpdateStatus, installUpdateNow, probeUpdate, startAutoUpdate } from './updater'
+import { getUpdateStatus, installUpdateNow, noteInstallAttempt, probeUpdate, startAutoUpdate } from './updater'
 import { generateCode, startDuoServer, type DuoServer } from '../server/duo-server'
 import { DUO_PORT, normalizeCode } from '../shared/protocol'
 
@@ -162,6 +162,8 @@ function showWindow(): void {
 }
 
 function quit(): void {
+  // A downloaded update installs itself as the app quits: remember that we tried.
+  if (!quitting) noteInstallAttempt()
   quitting = true
   app.quit()
 }
@@ -181,7 +183,9 @@ function createWindow(): void {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: true
+      sandbox: true,
+      // No dictionary to load at startup, none to download.
+      spellcheck: false
     }
   })
 
@@ -349,6 +353,9 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('duo:update-status', () => getUpdateStatus())
+  ipcMain.on('duo:open-releases', () => {
+    void shell.openExternal('https://github.com/KillianHzr/duo/releases/latest')
+  })
   ipcMain.on('duo:install-update', () => {
     quitting = true
     installUpdateNow()

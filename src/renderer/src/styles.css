@@ -167,10 +167,13 @@ header {
   overflow: hidden;
 }
 
+/* Meters grow with a transform: the graphics card stretches them, nothing is laid out again. */
 .meter > div {
   height: 100%;
   background: var(--ok);
-  transition: width 0.12s linear;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.12s linear;
 }
 
 .volume {
@@ -264,7 +267,9 @@ header {
 .threshold-meter .fill {
   height: 100%;
   background: var(--ok);
-  transition: width 0.06s linear;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.06s linear;
 }
 
 .threshold-meter .fill.closed {

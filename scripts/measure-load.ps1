@@ -1,35 +1,72 @@
-# Measures CPU and RAM load of Duo instances in a call (fake microphone, muted output).
-# Usage: pwsh scripts/measure-load.ps1 [-Hidden]   (requires: npm run build)
-param([switch]$Hidden, [int]$Seconds = 20)
+# Measures the CPU and RAM load of two instances in a call (fake microphone, muted output,
+# loopback only, no window shown), broken down by process: main, window, audio, GPU, network.
+# Usage: pwsh scripts/measure-load.ps1 [-Seconds 20] [-Enhanced] [-Gate]   (requires: npm run build)
+param([int]$Seconds = 20, [switch]$Enhanced, [switch]$Gate)
 
 $root = Split-Path $PSScriptRoot -Parent
-$log = Join-Path $env:TEMP 'duo-e2e-load.txt'
-$env:DUO_E2E_DURATION = [string](($Seconds + 22) * 1000)
-if ($Hidden) { $env:DUO_E2E_HIDE = '1' }
-$job = Start-Process node -ArgumentList 'scripts/e2e-voice.mjs' -WorkingDirectory $root -PassThru -WindowStyle Hidden -RedirectStandardOutput $log
-$env:DUO_E2E_DURATION = $null
-$env:DUO_E2E_HIDE = $null
+$electron = Join-Path $root 'node_modules\electron\dist\electron.exe'
+$port = 47904
+$duration = ($Seconds + 16) * 1000
 
-function Get-Sample {
-  $app = Get-CimInstance Win32_Process -Filter "Name='electron.exe'" | Where-Object { $_.ExecutablePath -like "$root\*" }
-  $srv = Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { $_.CommandLine -like '*server/index.ts*' }
-  $cpu = { param($p) (($p | Measure-Object KernelModeTime -Sum).Sum + ($p | Measure-Object UserModeTime -Sum).Sum) / 1e7 }
-  $mem = { param($p) ($p | ForEach-Object { (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue).PrivateMemorySize64 } | Measure-Object -Sum).Sum / 1MB }
-  [pscustomobject]@{ AppCpu = & $cpu $app; AppMem = & $mem $app; SrvCpu = & $cpu $srv; SrvMem = & $mem $srv; At = Get-Date }
+function Start-Instance($name, [switch]$HostIt) {
+  $data = Join-Path $env:TEMP "duo-load-$name-$PID"
+  $env:DUO_E2E_NAME = $name
+  $env:DUO_E2E_SERVER = "ws://127.0.0.1:$port"
+  $env:DUO_E2E_CODE = 'LOAD42'
+  $env:DUO_E2E_DURATION = [string]$duration
+  $env:DUO_E2E_USERDATA = $data
+  $env:DUO_E2E_HOST_PORT = if ($HostIt) { [string]$port } else { $null }
+  $env:DUO_E2E_DATA = if ($HostIt) { Join-Path $data 'data' } else { $null }
+  $env:DUO_E2E_ENHANCED = if ($Enhanced) { '1' } else { $null }
+  $env:DUO_E2E_GATE = if ($Gate) { '-60' } else { $null }
+  $env:ELECTRON_RUN_AS_NODE = $null
+  $started = Get-Date
+  $process = Start-Process $electron -ArgumentList '.' -WorkingDirectory $root -PassThru -WindowStyle Hidden
+  [pscustomobject]@{ Process = $process; Data = $data; Started = $started }
 }
 
-Start-Sleep 14
+$instances = @((Start-Instance 'Alice' -HostIt))
+Start-Sleep 3
+$instances += Start-Instance 'Bob'
+foreach ($name in 'DUO_E2E_NAME', 'DUO_E2E_SERVER', 'DUO_E2E_CODE', 'DUO_E2E_DURATION', 'DUO_E2E_USERDATA', 'DUO_E2E_HOST_PORT', 'DUO_E2E_DATA', 'DUO_E2E_ENHANCED', 'DUO_E2E_GATE') {
+  Remove-Item "env:$name" -ErrorAction SilentlyContinue
+}
+
+function Get-Sample {
+  $all = Get-CimInstance Win32_Process -Filter "Name='electron.exe'" | Where-Object { $_.CommandLine -like "*duo-load-*-$PID*" -or $instances.Process.Id -contains $_.ProcessId }
+  $rows = foreach ($p in $all) {
+    $kind = if ($p.CommandLine -match '--type=renderer') { 'window' }
+      elseif ($p.CommandLine -match '--type=gpu-process') { 'gpu' }
+      elseif ($p.CommandLine -match 'audio\.mojom') { 'audio' }
+      elseif ($p.CommandLine -match 'network\.mojom') { 'network' }
+      elseif ($p.CommandLine -match '--type=') { 'other' }
+      else { 'main' }
+    $mem = (Get-Process -Id $p.ProcessId -ErrorAction SilentlyContinue).PrivateMemorySize64 / 1MB
+    [pscustomobject]@{ Kind = $kind; Cpu = ($p.KernelModeTime + $p.UserModeTime) / 1e7; Mem = $mem }
+  }
+  [pscustomobject]@{ Rows = $rows; At = Get-Date }
+}
+
+Start-Sleep 9
 $a = Get-Sample
 Start-Sleep $Seconds
 $b = Get-Sample
 $elapsed = ($b.At - $a.At).TotalSeconds
 $cores = [Environment]::ProcessorCount
+$count = $instances.Count
 
-$mode = if ($Hidden) { 'window hidden' } else { 'window visible' }
-"Mode: $mode, measured over $([int]$elapsed) s, $cores logical cores"
-"App (per instance): {0:N1} % of one core = {1:N2} % of total CPU; {2:N0} MB RAM" -f `
-  (($b.AppCpu - $a.AppCpu) / $elapsed * 100 / 3), (($b.AppCpu - $a.AppCpu) / $elapsed * 100 / 3 / $cores), ($b.AppMem / 3)
+"Two instances in a call, measured over $([int]$elapsed) s, $cores logical cores. Figures are per instance."
+$total = 0; $totalMem = 0
+foreach ($kind in 'main', 'window', 'audio', 'gpu', 'network', 'other') {
+  $cpu = ((($b.Rows | Where-Object Kind -eq $kind | Measure-Object Cpu -Sum).Sum) - (($a.Rows | Where-Object Kind -eq $kind | Measure-Object Cpu -Sum).Sum)) / $elapsed * 100 / $count
+  $mem = (($b.Rows | Where-Object Kind -eq $kind | Measure-Object Mem -Sum).Sum) / $count
+  $total += $cpu; $totalMem += $mem
+  "{0,-8} {1,5:N1} % of one core   {2,5:N0} MB" -f $kind, $cpu, $mem
+}
+"{0,-8} {1,5:N1} % of one core   {2,5:N0} MB   ({3:N2} % of total CPU)" -f 'TOTAL', $total, $totalMem, ($total / $cores)
 
-
-$job.WaitForExit(90000) | Out-Null
-Get-Content $log | Select-String 'FAIL|pass|failure'
+foreach ($instance in $instances) {
+  $instance.Process.WaitForExit(40000) | Out-Null
+  if (-not $instance.Process.HasExited) { Stop-Process -Id $instance.Process.Id -Force -ErrorAction SilentlyContinue }
+  Remove-Item $instance.Data -Recurse -Force -ErrorAction SilentlyContinue
+}

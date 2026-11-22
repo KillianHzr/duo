@@ -16,6 +16,8 @@ function broadcastAddresses(): string[] {
   return [...result]
 }
 
+const FIRST_REPLY_GRACE_MS = 60
+
 /**
  * Looks for Duo servers on the local network with a UDP broadcast.
  * Returns their WebSocket URLs, this machine first.
@@ -45,6 +47,9 @@ export function discoverServers(timeoutMs = 700): Promise<string[]> {
         const reply = JSON.parse(data.toString()) as DiscoveryReply
         if (reply.service === 'duo' && Number.isInteger(reply.port)) {
           found.add(`ws://${rinfo.address}:${reply.port}`)
+          // A host answered: no need to wait out the full delay, only long enough for this
+          // computer's own answer to arrive too if it is hosting.
+          if (found.size === 1) setTimeout(finish, FIRST_REPLY_GRACE_MS)
         }
       } catch {
         /* unrelated packet */

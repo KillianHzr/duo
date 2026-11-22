@@ -102,6 +102,7 @@ const heard = (listener, speaker) => reports[listener]?.peers.find((p) => p.name
 console.log('\nSound actually received')
 check(heard('Bob', 'Alice') > 0, `Bob hears Alice, default settings (energy ${num(heard('Bob', 'Alice'), 5)})`)
 check(heard('Alice', 'Bob') > 0, `Alice hears Bob through enhanced suppression (energy ${num(heard('Alice', 'Bob'), 5)})`)
+check(bob?.heardPeak > 0 && alice?.heardPeak > 0, `the level meters of the people heard move (peak ${num(bob?.heardPeak, 2)})`)
 check(bob?.micPeakDb > -100, `Bob: his level is measured after the filter (peak ${num(bob?.micPeakDb)} dB)`)
 check(carol?.micPeakDb > -60, `Carol: her peak level ${num(carol?.micPeakDb)} dB is above the -60 dB threshold`)
 check(heard('Alice', 'Carol') > 0, `Alice hears Carol through the open gate (energy ${num(heard('Alice', 'Carol'), 5)})`)

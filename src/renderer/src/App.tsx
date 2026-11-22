@@ -6,7 +6,7 @@ import { t, type MessageKey } from './i18n'
 import { Chat } from './Chat'
 import { Notes } from './Notes'
 import type { Space } from './space'
-import type { PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
+import type { Levels, PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
 
 type Tab = 'voice' | 'chat' | 'notes'
 
@@ -91,7 +91,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   const [manual, setManual] = useState(() => localStorage.getItem('duo.server') ?? '')
   const [showSettings, setShowSettings] = useState(false)
   const [showStats, setShowStats] = useState(false)
-  const [update, setUpdate] = useState<UpdateStatus>({ ready: null })
+  const [update, setUpdate] = useState<UpdateStatus>({ ready: null, blocked: null })
   /** Bumped to force a new connection attempt even when nothing else changed. */
   const [attempt, setAttempt] = useState(0)
 
@@ -117,6 +117,12 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
       if (!ok) void engine.updateSettings({ pttEnabled: false })
     })
   }, [engine, pttEnabled, pttBinding?.kind, pttBinding?.code]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Network measurements are only taken while they are on screen.
+  useEffect(() => {
+    engine.setStatsEnabled(showStats && tab === 'voice')
+    return () => engine.setStatsEnabled(false)
+  }, [engine, showStats, tab])
 
   const role = app?.role ?? null
   const code = app?.code ?? ''
@@ -258,6 +264,12 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
           <button onClick={() => window.duo.installUpdate()}>{t('restart')}</button>
         </div>
       )}
+      {update.blocked && !update.ready && (
+        <div className="notice">
+          <span>{t('updateBlocked', { version: update.blocked })}</span>
+          <button onClick={() => window.duo.openReleases()}>{t('download')}</button>
+        </div>
+      )}
       {voice.error && <div className="error">{errorText(voice.error)}</div>}
 
       {(shared.available || tab !== 'voice') && (
@@ -283,12 +295,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
       {tab === 'notes' && !showSettings && <Notes space={space} self={name} />}
 
       <section className="people" hidden={tab !== 'voice'}>
-        <Person
-          name={`${name} (${t('you')})`}
-          level={voice.muted || !sending ? 0 : dbToLevel(voice.micDb)}
-          muted={voice.muted}
-          deafened={voice.deafened}
-        />
+        <SelfPerson engine={engine} name={`${name} (${t('you')})`} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
         {voice.peers.map((peer) => (
           <PeerRow key={peer.id} peer={peer} engine={engine} showStats={showStats} />
         ))}
@@ -348,9 +355,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
             onChange={(gateEnabled) => void engine.updateSettings({ gateEnabled })}
           />
           <div className="threshold">
-            <div className="threshold-meter" aria-hidden>
-              <div className={sending ? 'fill' : 'fill closed'} style={{ width: `${dbToLevel(voice.micDb) * 100}%` }} />
-            </div>
+            <ThresholdMeter engine={engine} sending={sending} />
             <input
               type="range"
               min={GATE_MIN_DB}
@@ -647,7 +652,7 @@ function Person(props: { name: string; level: number; muted: boolean; deafened: 
         </span>
       </div>
       <div className="meter" aria-hidden>
-        <div style={{ width: `${Math.round(props.level * 100)}%` }} />
+        <div style={{ transform: `scaleX(${props.level.toFixed(3)})` }} />
       </div>
     </div>
   )
@@ -660,17 +665,34 @@ const CONNECTION_NOTE: Partial<Record<RTCPeerConnectionState, MessageKey>> = {
   failed: 'linkLost'
 }
 
+// Sound levels change many times a second. Only these small components follow them, so the
+// rest of the window is not redrawn each time.
+const useLevels = (engine: VoiceEngine): Levels => useSyncExternalStore(engine.subscribeLevels, engine.getLevels)
+
+function SelfPerson(props: { engine: VoiceEngine; name: string; silent: boolean; muted: boolean; deafened: boolean }) {
+  const { micDb } = useLevels(props.engine)
+  return <Person name={props.name} level={props.silent ? 0 : dbToLevel(micDb)} muted={props.muted} deafened={props.deafened} />
+}
+
+function ThresholdMeter({ engine, sending }: { engine: VoiceEngine; sending: boolean }) {
+  const { micDb } = useLevels(engine)
+  return (
+    <div className="threshold-meter" aria-hidden>
+      <div className={sending ? 'fill' : 'fill closed'} style={{ transform: `scaleX(${dbToLevel(micDb)})` }} />
+    </div>
+  )
+}
+
+function PeerLevel({ peer, engine, note }: { peer: PeerView; engine: VoiceEngine; note?: string }) {
+  const level = useLevels(engine).peers[peer.id] ?? 0
+  return <Person name={peer.name} level={level} muted={peer.muted} deafened={peer.deafened} note={note} />
+}
+
 function PeerRow({ peer, engine, showStats }: { peer: PeerView; engine: VoiceEngine; showStats: boolean }) {
   const note = CONNECTION_NOTE[peer.connection]
   return (
     <div className="peer">
-      <Person
-        name={peer.name}
-        level={peer.level}
-        muted={peer.muted}
-        deafened={peer.deafened}
-        note={note && t(note)}
-      />
+      <PeerLevel peer={peer} engine={engine} note={note && t(note)} />
       <label className="volume">
         <span className="small muted">{t('volume')}</span>
         <input

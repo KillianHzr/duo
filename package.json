@@ -35,8 +35,14 @@
       "buildResources": "build"
     },
     "npmRebuild": false,
+    "electronLanguages": [
+      "en-US",
+      "fr"
+    ],
     "files": [
-      "out/**/*"
+      "out/**/*",
+      "!node_modules/uiohook-napi/{libuiohook,src,build,binding.gyp}",
+      "!node_modules/uiohook-napi/prebuilds/{darwin-*,linux-arm64,linux-loong64,win32-arm64}"
     ],
     "publish": {
       "provider": "github",

@@ -56,8 +56,12 @@ if (e2e) {
   // Automated test: connect straight away, then report the latest measurements to the main process.
   // The fake microphone beeps on and off, so keep the loudest level seen, not the last one.
   let micPeakDb = -100
-  engine.subscribe(() => {
-    micPeakDb = Math.max(micPeakDb, engine.getSnapshot().micDb)
+  let heardPeak = 0
+  engine.setStatsEnabled(true)
+  engine.subscribeLevels(() => {
+    const levels = engine.getLevels()
+    micPeakDb = Math.max(micPeakDb, levels.micDb)
+    heardPeak = Math.max(heardPeak, ...Object.values(levels.peers))
   })
   void (async () => {
     await engine.start(e2e.server, e2e.name, e2e.code)
@@ -79,6 +83,7 @@ if (e2e) {
       error: snapshot.error,
       visibility: document.visibilityState,
       micPeakDb,
+      heardPeak,
       gateOpen: snapshot.gateOpen,
       chat: {
         available: shared.available,

@@ -217,7 +217,7 @@ export function Chat({ space, self }: { space: Space; self: string }) {
             </button>
           ) : (
             <div className="meter">
-              <div style={{ width: `${Math.round(upload.progress * 100)}%` }} />
+              <div style={{ transform: `scaleX(${upload.progress.toFixed(3)})` }} />
             </div>
           )}
         </div>

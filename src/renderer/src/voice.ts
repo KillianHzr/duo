@@ -73,10 +73,17 @@ export interface PeerStats {
   codec: string | null
 }
 
+/** Sound levels, published apart from the rest because they change many times a second. */
+export interface Levels {
+  /** Microphone level in dBFS, after noise suppression (SILENCE_DB when unknown). */
+  micDb: number
+  /** Level of each person heard, 0 to 1, by id. */
+  peers: Record<string, number>
+}
+
 export interface PeerView extends PeerInfo {
   connection: RTCPeerConnectionState
   volume: number
-  level: number
   stats: PeerStats
 }
 
@@ -90,8 +97,7 @@ export interface VoiceSnapshot {
   selfId: string | null
   muted: boolean
   deafened: boolean
-  /** Microphone level in dBFS, after noise suppression (SILENCE_DB when unknown). */
-  micDb: number
+
   /** False while the sensitivity gate is holding the microphone shut. */
   gateOpen: boolean
   /** True while the user is listening to their own microphone. */
@@ -123,6 +129,7 @@ interface Peer {
   /** Only one side ever makes offers, which rules out collisions. */
   offerer: boolean
   audio: HTMLAudioElement
+  receiver: RTCRtpReceiver | null
   pendingCandidates: RTCIceCandidateInit[]
   remoteReady: boolean
   volume: number
@@ -226,6 +233,24 @@ export class VoiceEngine {
     return this.snapshot
   }
 
+  private levelListeners = new Set<() => void>()
+  private levels: Levels = { micDb: SILENCE_DB, peers: {} }
+  private statsEnabled = false
+
+  subscribeLevels = (listener: () => void): (() => void) => {
+    this.levelListeners.add(listener)
+    return () => this.levelListeners.delete(listener)
+  }
+
+  getLevels = (): Levels => this.levels
+
+  private emitLevels(): void {
+    const peers: Record<string, number> = {}
+    for (const [id, peer] of this.peers) peers[id] = peer.level
+    this.levels = { micDb: this.micDb, peers }
+    for (const listener of this.levelListeners) listener()
+  }
+
   private emit(): void {
     this.snapshot = this.buildSnapshot()
     for (const listener of this.listeners) listener()
@@ -238,7 +263,6 @@ export class VoiceEngine {
       selfId: this.selfId,
       muted: this.muted,
       deafened: this.deafened,
-      micDb: this.micDb,
       gateOpen: this.gateOpen,
       testing: this.testing,
       pttDown: this.pttDown,
@@ -246,7 +270,6 @@ export class VoiceEngine {
         ...p.info,
         connection: p.pc.connectionState,
         volume: p.volume,
-        level: p.level,
         stats: p.stats
       })),
       inputs: this.inputs,
@@ -279,7 +302,8 @@ export class VoiceEngine {
       this.releaseMic()
       return
     }
-    await this.refreshDevices()
+    // The device list is only needed by the settings panel: connecting does not wait for it.
+    void this.refreshDevices()
     this.openSocket()
     this.updateTicker()
   }
@@ -403,9 +427,13 @@ export class VoiceEngine {
       if (typeof event.data.open === 'boolean') {
         this.gateOpen = event.data.open
         this.applySendState()
+        this.emit()
       }
-      if (typeof event.data.level === 'number') this.micDb = event.data.level
-      this.emit()
+      // The level changes twenty times a second: it only wakes the meters, not the whole window.
+      if (typeof event.data.level === 'number') {
+        this.micDb = event.data.level
+        this.emitLevels()
+      }
     }
 
     this.graph = { nodes, gate, monitor, rnnoise }
@@ -683,6 +711,7 @@ export class VoiceEngine {
       pc,
       offerer: this.selfId < info.id,
       audio,
+      receiver: null,
       pendingCandidates: [],
       remoteReady: false,
       volume: 1,
@@ -700,6 +729,7 @@ export class VoiceEngine {
 
     pc.ontrack = (event) => {
       // Receive buffer at its minimum: it only grows when the network requires it.
+      peer.receiver = event.receiver
       const receiver = event.receiver as TunableReceiver
       if ('jitterBufferTarget' in receiver) receiver.jitterBufferTarget = 0
       if ('playoutDelayHint' in receiver) receiver.playoutDelayHint = 0
@@ -782,27 +812,45 @@ export class VoiceEngine {
     const shouldRun = this.wanted && document.visibilityState === 'visible'
     this.configureGate()
     if (shouldRun && this.ticker === null) {
-      this.ticker = window.setInterval(() => void this.onTick(), LEVEL_INTERVAL_MS)
+      this.ticker = window.setInterval(() => this.onTick(), LEVEL_INTERVAL_MS)
     } else if (!shouldRun && this.ticker !== null) {
       window.clearInterval(this.ticker)
       this.ticker = null
       this.micDb = SILENCE_DB
+      this.emitLevels()
     }
   }
 
-  private async onTick(): Promise<void> {
+  /**
+   * Levels come from a cheap synchronous read, several times a second, and only wake the meters.
+   * Network figures need a full statistics report, so they are only collected while displayed.
+   */
+  private onTick(): void {
     this.tick++
-    await this.collectStats(this.tick % STATS_EVERY_N_TICKS === 0)
-    this.emit()
+    for (const peer of this.peers.values()) {
+      const source = peer.pc.connectionState === 'connected' ? peer.receiver?.getSynchronizationSources()[0] : undefined
+      peer.level = Math.min(1, (source?.audioLevel ?? 0) * 4)
+    }
+    this.emitLevels()
+    if (this.statsEnabled && this.tick % STATS_EVERY_N_TICKS === 0) void this.collectStats().then(() => this.emit())
   }
 
-  /** Reads levels; with `full`, also computes network figures over the elapsed interval. */
-  private async collectStats(full: boolean): Promise<void> {
-    for (const peer of this.peers.values()) {
-      if (peer.pc.connectionState !== 'connected') {
-        peer.level = 0
-        continue
+  /** Turns the network measurements on or off (they cost a little, so only while shown). */
+  setStatsEnabled(enabled: boolean): void {
+    this.statsEnabled = enabled
+    if (!enabled) {
+      for (const peer of this.peers.values()) {
+        peer.stats = EMPTY_STATS
+        peer.counters = null
       }
+      this.emit()
+    }
+  }
+
+  /** Computes network figures over the elapsed interval. */
+  private async collectStats(): Promise<void> {
+    for (const peer of this.peers.values()) {
+      if (peer.pc.connectionState !== 'connected') continue
       const report = await peer.pc.getStats()
       type Stat = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
       let inbound: Stat | undefined
@@ -815,8 +863,7 @@ export class VoiceEngine {
         else if (stat.type === 'outbound-rtp' && stat.kind === 'audio') outbound = stat
         else if (stat.type === 'candidate-pair' && stat.nominated && stat.state === 'succeeded') pair = stat
       })
-      peer.level = Math.min(1, (inbound?.audioLevel ?? 0) * 4)
-      if (!full || !inbound || !outbound) continue
+      if (!inbound || !outbound) continue
 
       const now: Counters = {
         at: performance.now(),
