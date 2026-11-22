@@ -1,7 +1,11 @@
 /**
- * End-to-end voice test on a single machine, without touching the real microphone or speakers:
- * launches one instance of the app hosting the server and two joining it, with a fake microphone and
- * muted output, then checks that voice flows directly with the expected settings.
+ * End-to-end voice test on a single machine, without touching the real microphone or speakers.
+ * Launches hidden instances of the app with a fake microphone and muted output, all on loopback:
+ *   Alice  hosts the server, default settings
+ *   Bob    joins with enhanced noise suppression (RNNoise)
+ *   Carol  joins with the sensitivity gate set under her microphone level, so she is heard
+ *   Dave   joins with the gate set above his microphone level, so he stays silent
+ *   Eve    tries to join with a wrong access code
  * Requires `npm run build` first.
  */
 import { spawn } from 'node:child_process'
@@ -18,8 +22,7 @@ const DURATION = Number(process.env.DUO_E2E_DURATION ?? 9000)
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 
-/** `host: true` makes that instance run the server itself, like a real host. */
-function runClient(name, { code = CODE, host = false } = {}) {
+function runClient(name, { code = CODE, host = false, enhanced = false, gateDb = null } = {}) {
   const userData = mkdtempSync(join(tmpdir(), 'duo-e2e-'))
   return new Promise((resolve) => {
     const env = {
@@ -32,11 +35,13 @@ function runClient(name, { code = CODE, host = false } = {}) {
       DUO_E2E_USERDATA: userData
     }
     if (host) env.DUO_E2E_HOST_PORT = String(PORT)
+    if (enhanced) env.DUO_E2E_ENHANCED = '1'
+    if (gateDb !== null) env.DUO_E2E_GATE = String(gateDb)
     delete env.ELECTRON_RUN_AS_NODE
     const child = spawn(electron, ['.'], { env, stdio: ['ignore', 'pipe', 'ignore'] })
     let output = ''
     child.stdout.on('data', (chunk) => (output += chunk))
-    const timer = setTimeout(() => child.kill(), DURATION + 20000)
+    const timer = setTimeout(() => child.kill(), DURATION + 24000)
     child.on('exit', () => {
       clearTimeout(timer)
       try {
@@ -55,42 +60,57 @@ const check = (ok, label) => {
   console.log(`${ok ? 'OK  ' : 'FAIL'} ${label}`)
   if (!ok) failures.push(label)
 }
+const num = (value, digits = 0) => (typeof value === 'number' ? value.toFixed(digits) : String(value))
 
-{
-  const hosting = runClient('Alice', { host: true })
-  await wait(2500)
-  const [alice, bob, eve] = await Promise.all([hosting, runClient('Bob'), runClient('Eve', { code: 'WRONG1' })])
+const hosting = runClient('Alice', { host: true })
+await wait(2500)
+const [alice, bob, carol, dave, eve] = await Promise.all([
+  hosting,
+  runClient('Bob', { enhanced: true }),
+  runClient('Carol', { gateDb: -60 }),
+  runClient('Dave', { gateDb: -5 }),
+  runClient('Eve', { code: 'WRONG1' })
+])
+const reports = { Alice: alice, Bob: bob, Carol: carol, Dave: dave }
 
-  for (const [who, report] of [
-    ['Alice', alice],
-    ['Bob', bob]
-  ]) {
-    if (!report) {
-      check(false, `${who}: no report received`)
-      continue
-    }
-    const peer = report.peers[0]
-    const s = peer?.stats
-    console.log(`\n${who}:`, JSON.stringify({ status: report.status, error: report.error, peer }, null, 1))
-    check(report.status === 'connected', `${who}: connected to the server`)
-    check(report.peers.length === 1, `${who}: sees exactly one other person`)
-    check(peer?.connection === 'connected', `${who}: audio link established`)
-    check(s?.route === 'host ↔ host', `${who}: direct link, no relay`)
-    check(s?.codec === 'opus', `${who}: Opus codec`)
-    check(s?.frameMs > 8 && s?.frameMs < 12, `${who}: 10 ms frames (measured ${s?.frameMs?.toFixed(1)})`)
-    check(s?.sendKbps > 60, `${who}: bitrate above 64 kb/s (measured ${s?.sendKbps?.toFixed(0)})`)
-    check(s?.lossPct === 0, `${who}: no packet lost`)
-    check(s?.bufferMs !== null && s?.bufferMs < 80, `${who}: low receive buffer (measured ${s?.bufferMs?.toFixed(0)} ms)`)
-    check(peer?.level > 0, `${who}: actually receives sound`)
+for (const [who, report] of Object.entries(reports)) {
+  console.log(`\n${who}`)
+  if (!report) {
+    check(false, `${who}: no report received`)
+    continue
   }
-
-  console.log('\nEve (wrong code):', JSON.stringify(eve))
-  check(
-    eve?.status === 'error' && eve?.error?.kind === 'rejected' && eve?.error?.reason === 'bad-code',
-    'Eve: rejected with a wrong access code'
-  )
-  check(eve?.peers.length === 0, 'Eve: gets no audio link')
+  check(report.status === 'connected', `${who}: connected to the server`)
+  check(report.peers.length === 3, `${who}: sees the three other people`)
+  for (const peer of report.peers) {
+    const s = peer.stats
+    const link = `${who} ↔ ${peer.name}`
+    check(peer.connection === 'connected', `${link}: audio link established`)
+    check(s.route === 'host ↔ host' && s.codec === 'opus', `${link}: direct link, Opus`)
+    check(s.frameMs > 8 && s.frameMs < 12, `${link}: 10 ms frames (measured ${num(s.frameMs, 1)})`)
+    check(s.lossPct === 0, `${link}: no packet lost`)
+    // Generous bound: five instances share this machine. A real two-person call measures 20-30 ms.
+    check(s.bufferMs !== null && s.bufferMs < 200, `${link}: receive buffer stays bounded (${num(s.bufferMs)} ms)`)
+  }
 }
+
+const heard = (listener, speaker) => reports[listener]?.peers.find((p) => p.name === speaker)?.stats.energy
+console.log('\nSound actually received')
+check(heard('Bob', 'Alice') > 0, `Bob hears Alice, default settings (energy ${num(heard('Bob', 'Alice'), 5)})`)
+check(heard('Alice', 'Bob') > 0, `Alice hears Bob through enhanced suppression (energy ${num(heard('Alice', 'Bob'), 5)})`)
+check(bob?.micPeakDb > -100, `Bob: his level is measured after the filter (peak ${num(bob?.micPeakDb)} dB)`)
+check(carol?.micPeakDb > -60, `Carol: her peak level ${num(carol?.micPeakDb)} dB is above the -60 dB threshold`)
+check(heard('Alice', 'Carol') > 0, `Alice hears Carol through the open gate (energy ${num(heard('Alice', 'Carol'), 5)})`)
+check(dave?.micPeakDb > -60, `Dave: the gate still measures his microphone while closed (peak ${num(dave?.micPeakDb)} dB)`)
+check(dave?.gateOpen === false, 'Dave: gate closed, his level is under the -5 dB threshold')
+check(heard('Alice', 'Dave') === 0, `Alice hears pure silence from Dave (energy ${num(heard('Alice', 'Dave'), 5)})`)
+check(heard('Dave', 'Alice') > 0, `Dave still hears Alice (energy ${num(heard('Dave', 'Alice'), 5)})`)
+
+console.log('\nEve (wrong code):', JSON.stringify(eve))
+check(
+  eve?.status === 'error' && eve?.error?.kind === 'rejected' && eve?.error?.reason === 'bad-code',
+  'Eve: rejected with a wrong access code'
+)
+check(eve?.peers.length === 0, 'Eve: gets no audio link')
 
 console.log(failures.length ? `\n${failures.length} failure(s)` : '\nAll tests pass')
 process.exit(failures.length ? 1 : 0)

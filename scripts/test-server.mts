@@ -55,7 +55,7 @@ const rejection = (client: TestClient): string | undefined => {
   return msg?.type === 'rejected' ? msg.reason : undefined
 }
 
-const server = await startDuoServer({ code: CODE, port: PORT })
+const server = await startDuoServer({ code: CODE, port: PORT, host: '127.0.0.1' })
 
 try {
   const reply = await discover()

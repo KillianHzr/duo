@@ -1,6 +1,6 @@
 {
   "name": "duo",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "description": "Low-latency private voice chat for your local network",
   "author": "KillianHzr",
@@ -17,8 +17,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "server": "tsx server/index.ts",
     "start": "electron-vite preview",
-    "test": "npm run typecheck && npm run test:server",
+    "test": "npm run typecheck && npm run test:server && npm run test:gate",
     "test:server": "tsx scripts/test-server.mts",
+    "test:gate": "node scripts/test-gate.mjs",
     "test:voice": "node scripts/e2e-voice.mjs",
     "icon": "node scripts/make-icon.mjs",
     "dist": "electron-vite build && electron-builder --publish never"
@@ -57,6 +58,7 @@
     "ws": "^8.23.0"
   },
   "devDependencies": {
+    "@sapphi-red/web-noise-suppressor": "^0.4.1",
     "@types/node": "^20.19.43",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",

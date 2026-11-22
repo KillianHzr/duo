@@ -4,6 +4,12 @@ import type { AppState, UpdateStatus } from '../../preload/index'
 import { t, type MessageKey } from './i18n'
 import type { PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
 
+const GATE_MIN_DB = -80
+const GATE_MAX_DB = -10
+
+/** Maps a level in dBFS onto the 0..1 width of a meter that spans the gate slider's range. */
+const dbToLevel = (db: number): number => Math.max(0, Math.min(1, (db - GATE_MIN_DB) / (GATE_MAX_DB - GATE_MIN_DB)))
+
 function toUrl(input: string): string {
   const host = input.trim().replace(/^[a-z]+:\/\//i, '').replace(/\/.*$/, '')
   return `ws://${host.includes(':') ? host : `${host}:${DUO_PORT}`}`
@@ -148,6 +154,9 @@ export function App({ engine }: { engine: VoiceEngine }) {
     )
   }
 
+  /** False while the sensitivity gate keeps the microphone shut. */
+  const sending = !voice.settings.gateEnabled || voice.gateOpen
+
   const statusLabel: Record<typeof voice.status, string> = {
     idle: t('searching'),
     connecting: t('connecting'),
@@ -177,7 +186,12 @@ export function App({ engine }: { engine: VoiceEngine }) {
       {voice.error && <div className="error">{errorText(voice.error)}</div>}
 
       <section className="people">
-        <Person name={`${name} (${t('you')})`} level={voice.micLevel} muted={voice.muted} deafened={voice.deafened} />
+        <Person
+          name={`${name} (${t('you')})`}
+          level={voice.muted || !sending ? 0 : dbToLevel(voice.micDb)}
+          muted={voice.muted}
+          deafened={voice.deafened}
+        />
         {voice.peers.map((peer) => (
           <PeerRow key={peer.id} peer={peer} engine={engine} showStats={showStats} />
         ))}
@@ -218,9 +232,54 @@ export function App({ engine }: { engine: VoiceEngine }) {
               ))}
             </select>
           </label>
+          <label>
+            {t('outputVolume')}
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(voice.settings.outputVolume * 100)}
+              onChange={(event) => void engine.updateSettings({ outputVolume: Number(event.target.value) / 100 })}
+            />
+          </label>
+
+          <Toggle
+            label={t('gate')}
+            hint={t('gateHint')}
+            checked={voice.settings.gateEnabled}
+            onChange={(gateEnabled) => void engine.updateSettings({ gateEnabled })}
+          />
+          <div className="threshold">
+            <div className="threshold-meter" aria-hidden>
+              <div className={sending ? 'fill' : 'fill closed'} style={{ width: `${dbToLevel(voice.micDb) * 100}%` }} />
+            </div>
+            <input
+              type="range"
+              min={GATE_MIN_DB}
+              max={GATE_MAX_DB}
+              value={voice.settings.gateThresholdDb}
+              disabled={!voice.settings.gateEnabled}
+              aria-label={t('gateThreshold')}
+              onChange={(event) => void engine.updateSettings({ gateThresholdDb: Number(event.target.value) })}
+            />
+            <span className="muted small">
+              {voice.settings.gateEnabled ? `${t('gateThreshold')} ${voice.settings.gateThresholdDb} dB` : t('gateOff')}
+            </span>
+          </div>
+          <button className={voice.testing ? 'toggle on' : 'toggle'} onClick={() => engine.setTesting(!voice.testing)}>
+            {voice.testing ? t('micTestStop') : t('micTest')}
+          </button>
+
+          <Toggle
+            label={t('enhancedSuppression')}
+            hint={t('enhancedHint')}
+            checked={voice.settings.enhancedSuppression}
+            onChange={(enhancedSuppression) => void engine.updateSettings({ enhancedSuppression })}
+          />
           <Toggle
             label={t('noiseSuppression')}
-            checked={voice.settings.noiseSuppression}
+            checked={voice.settings.noiseSuppression || voice.settings.enhancedSuppression}
+            disabled={voice.settings.enhancedSuppression}
             onChange={(noiseSuppression) => void engine.updateSettings({ noiseSuppression })}
           />
           <Toggle
@@ -422,10 +481,21 @@ function Stats({ stats }: { stats: PeerStats }) {
   )
 }
 
-function Toggle(props: { label: string; hint?: string; checked: boolean; onChange: (value: boolean) => void }) {
+function Toggle(props: {
+  label: string
+  hint?: string
+  checked: boolean
+  disabled?: boolean
+  onChange: (value: boolean) => void
+}) {
   return (
     <label className="check">
-      <input type="checkbox" checked={props.checked} onChange={(event) => props.onChange(event.target.checked)} />
+      <input
+        type="checkbox"
+        checked={props.checked}
+        disabled={props.disabled}
+        onChange={(event) => props.onChange(event.target.checked)}
+      />
       <span>
         {props.label}
         {props.hint && <span className="muted small"> — {props.hint}</span>}

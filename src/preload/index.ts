@@ -6,6 +6,8 @@ export interface E2EConfig {
   name: string
   server: string
   code: string
+  enhanced: boolean
+  gateDb: number | null
   durationMs: number
 }
 

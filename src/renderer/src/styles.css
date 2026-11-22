@@ -232,6 +232,45 @@ header {
   accent-color: var(--accent);
 }
 
+.panel {
+  max-height: 55%;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.panel input[type='range'] {
+  accent-color: var(--accent);
+}
+
+/* The level meter sits right under the threshold slider, on the same scale. */
+.threshold {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.threshold input[type='range'] {
+  width: 100%;
+  margin: 0;
+}
+
+.threshold-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--panel-2);
+  overflow: hidden;
+}
+
+.threshold-meter .fill {
+  height: 100%;
+  background: var(--ok);
+  transition: width 0.06s linear;
+}
+
+.threshold-meter .fill.closed {
+  background: var(--warn);
+}
+
 .row {
   display: flex;
   gap: 8px;

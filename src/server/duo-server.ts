@@ -32,6 +32,8 @@ export interface DuoServerOptions {
   /** Access code clients must present to join. */
   code: string
   port?: number
+  /** Address to listen on. Defaults to every interface; tests use 127.0.0.1. */
+  host?: string
   log?: (message: string) => void
 }
 
@@ -72,6 +74,7 @@ interface Client {
 
 export function startDuoServer(options: DuoServerOptions): Promise<DuoServer> {
   const port = options.port ?? DUO_PORT
+  const host = options.host ?? '0.0.0.0'
   const log = options.log ?? (() => {})
   const clients = new Map<string, Client>()
   /** Wrong-code attempts per address, to slow down guessing. */
@@ -218,8 +221,8 @@ export function startDuoServer(options: DuoServerOptions): Promise<DuoServer> {
       clearInterval(heartbeat)
       reject(err)
     })
-    http.listen(port, '0.0.0.0', () => {
-      discovery.bind(port, '0.0.0.0')
+    http.listen(port, host, () => {
+      discovery.bind(port, host)
       log(`Duo server ready on port ${port} (local network only)`)
       resolve({ port, close })
     })

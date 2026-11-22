@@ -6,6 +6,10 @@ import {
   type ServerMessage,
   type SignalData
 } from '../../shared/protocol'
+import { RnnoiseWorkletNode, loadRnnoise } from '@sapphi-red/web-noise-suppressor'
+import rnnoiseWorkletUrl from '@sapphi-red/web-noise-suppressor/rnnoiseWorklet.js?url'
+import rnnoiseWasmUrl from '@sapphi-red/web-noise-suppressor/rnnoise.wasm?url'
+import rnnoiseSimdWasmUrl from '@sapphi-red/web-noise-suppressor/rnnoise_simd.wasm?url'
 import { tuneOpus } from './sdp'
 
 export interface VoiceSettings {
@@ -14,6 +18,14 @@ export interface VoiceSettings {
   echoCancellation: boolean
   noiseSuppression: boolean
   autoGainControl: boolean
+  /** RNNoise: removes more noise (clicks, breathing, fans) but adds a little delay. */
+  enhancedSuppression: boolean
+  /** Sensitivity gate: nothing is sent while the microphone stays under the threshold. */
+  gateEnabled: boolean
+  /** Gate threshold in dBFS, from -80 (lets everything through) to -10. */
+  gateThresholdDb: number
+  /** Master volume for everyone else, 0 to 1. */
+  outputVolume: number
 }
 
 export const DEFAULT_SETTINGS: VoiceSettings = {
@@ -21,8 +33,14 @@ export const DEFAULT_SETTINGS: VoiceSettings = {
   outputId: 'default',
   echoCancellation: true,
   noiseSuppression: true,
-  autoGainControl: true
+  autoGainControl: true,
+  enhancedSuppression: false,
+  gateEnabled: false,
+  gateThresholdDb: -45,
+  outputVolume: 1
 }
+
+export const SILENCE_DB = -100
 
 export interface PeerStats {
   /** Network round trip, in ms. */
@@ -39,6 +57,8 @@ export interface PeerStats {
   frameMs: number | null
   /** Audio bitrate sent, in kb/s. */
   sendKbps: number | null
+  /** Sound energy received over the last second (0 means pure silence). */
+  energy: number | null
   /** 'host' on both sides means a direct link on the local network. */
   route: string | null
   codec: string | null
@@ -61,7 +81,12 @@ export interface VoiceSnapshot {
   selfId: string | null
   muted: boolean
   deafened: boolean
-  micLevel: number
+  /** Microphone level in dBFS, after noise suppression (SILENCE_DB when unknown). */
+  micDb: number
+  /** False while the sensitivity gate is holding the microphone shut. */
+  gateOpen: boolean
+  /** True while the user is listening to their own microphone. */
+  testing: boolean
   peers: PeerView[]
   inputs: MediaDeviceInfo[]
   outputs: MediaDeviceInfo[]
@@ -78,6 +103,7 @@ interface Counters {
   totalSamplesReceived: number
   packetsSent: number
   bytesSent: number
+  audioEnergy: number
 }
 
 interface Peer {
@@ -102,6 +128,7 @@ const EMPTY_STATS: PeerStats = {
   concealedPct: null,
   frameMs: null,
   sendKbps: null,
+  energy: null,
   route: null,
   codec: null
 }
@@ -109,6 +136,7 @@ const EMPTY_STATS: PeerStats = {
 const LEVEL_INTERVAL_MS = 150
 const STATS_EVERY_N_TICKS = 7 // ≈ 1 s
 
+type SinkContext = AudioContext & { setSinkId?: (id: string) => Promise<void> }
 type SinkAudio = HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }
 type TunableReceiver = RTCRtpReceiver & { jitterBufferTarget?: number | null; playoutDelayHint?: number }
 
@@ -129,18 +157,26 @@ export class VoiceEngine {
   private error: VoiceError | null = null
   private muted = false
   private deafened = false
-  private micLevel = 0
+  private micDb = SILENCE_DB
+  private gateOpen = true
+  private testing = false
   private settings: VoiceSettings
+  /** Raw microphone capture. */
   private stream: MediaStream | null = null
+  /** What peers receive: the raw track, or the RNNoise output when enhanced suppression is on. */
+  private sendTrack: MediaStreamTrack | null = null
+  private sendStream: MediaStream | null = null
   private peers = new Map<string, Peer>()
   private inputs: MediaDeviceInfo[] = []
   private outputs: MediaDeviceInfo[] = []
   private ticker: number | null = null
   private tick = 0
   private audioContext: AudioContext | null = null
-  private analyser: AnalyserNode | null = null
-  private analyserSource: MediaStreamAudioSourceNode | null = null
-  private analyserData: Float32Array<ArrayBuffer> | null = null
+  private contextReady: Promise<AudioContext> | null = null
+  private rnnoiseBinary: Promise<ArrayBuffer> | null = null
+  /** Nodes of the current microphone graph, torn down whenever the microphone changes. */
+  private graph: { nodes: AudioNode[]; gate: AudioWorkletNode; monitor: GainNode; rnnoise: RnnoiseWorkletNode | null } | null =
+    null
 
   constructor(settings: VoiceSettings) {
     this.settings = { ...settings }
@@ -176,7 +212,9 @@ export class VoiceEngine {
       selfId: this.selfId,
       muted: this.muted,
       deafened: this.deafened,
-      micLevel: this.micLevel,
+      micDb: this.micDb,
+      gateOpen: this.gateOpen,
+      testing: this.testing,
       peers: [...this.peers.values()].map((p) => ({
         ...p.info,
         connection: p.pc.connectionState,
@@ -237,13 +275,153 @@ export class VoiceEngine {
   // ----- Microphone -----
 
   private releaseMic(): void {
+    this.teardownGraph()
     this.stream?.getTracks().forEach((t) => t.stop())
     this.stream = null
-    this.detachAnalyser()
+    this.sendTrack?.stop()
+    this.sendTrack = null
+    this.sendStream = null
+    this.testing = false
+    this.micDb = SILENCE_DB
+    this.gateOpen = true
+    if (this.audioContext?.state === 'running') void this.audioContext.suspend()
+  }
+
+  /** One 48 kHz context for the whole app, with the gate worklet loaded. */
+  private ensureContext(): Promise<AudioContext> {
+    this.contextReady ??= (async () => {
+      const context = new AudioContext({ sampleRate: 48000, latencyHint: 'interactive' })
+      await context.audioWorklet.addModule(new URL('gate-processor.js', document.baseURI).href)
+      this.audioContext = context
+      this.applyContextSink()
+      return context
+    })()
+    return this.contextReady.then(async (context) => {
+      if (context.state === 'suspended') await context.resume()
+      return context
+    })
+  }
+
+  private async createRnnoise(context: AudioContext): Promise<RnnoiseWorkletNode> {
+    this.rnnoiseBinary ??= (async () => {
+      await context.audioWorklet.addModule(rnnoiseWorkletUrl)
+      return loadRnnoise({ url: rnnoiseWasmUrl, simdUrl: rnnoiseSimdWasmUrl })
+    })()
+    return new RnnoiseWorkletNode(context, { maxChannels: 1, wasmBinary: await this.rnnoiseBinary })
+  }
+
+  private teardownGraph(): void {
+    if (!this.graph) return
+    this.graph.gate.port.onmessage = null
+    this.graph.rnnoise?.destroy()
+    for (const node of this.graph.nodes) node.disconnect()
+    this.graph = null
+  }
+
+  /**
+   * Builds the audio graph around the microphone:
+   *   mic ─► [RNNoise] ─► gate (listens only) and monitor (mic test)
+   * Without enhanced suppression the raw track is sent as is, so the graph adds no delay.
+   * With it, peers receive the RNNoise output instead.
+   */
+  private async buildGraph(stream: MediaStream): Promise<MediaStreamTrack> {
+    const context = await this.ensureContext()
+    this.teardownGraph()
+
+    const source = context.createMediaStreamSource(stream)
+    const nodes: AudioNode[] = [source]
+    let processed: AudioNode = source
+    // A clone goes out to peers. Switching the original off would also silence the gate that
+    // listens to it, and the gate could then never open again.
+    let track = stream.getAudioTracks()[0].clone()
+    let rnnoise: RnnoiseWorkletNode | null = null
+
+    if (this.settings.enhancedSuppression) {
+      try {
+        rnnoise = await this.createRnnoise(context)
+        const output = context.createMediaStreamDestination()
+        output.channelCount = 1
+        source.connect(rnnoise)
+        rnnoise.connect(output)
+        nodes.push(rnnoise, output)
+        processed = rnnoise
+        track.stop()
+        track = output.stream.getAudioTracks()[0]
+      } catch (err) {
+        // Never lose the microphone over an optional filter: fall back to the raw track.
+        console.error('enhanced noise suppression unavailable', err)
+        rnnoise = null
+      }
+    }
+
+    const gate = new AudioWorkletNode(context, 'duo-gate', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      channelCount: 1,
+      channelCountMode: 'explicit'
+    })
+    // The gate outputs nothing; routing it to a silent gain just keeps it processing.
+    const silent = context.createGain()
+    silent.gain.value = 0
+    const monitor = context.createGain()
+    monitor.gain.value = 0
+    processed.connect(gate)
+    gate.connect(silent)
+    silent.connect(context.destination)
+    processed.connect(monitor)
+    monitor.connect(context.destination)
+    nodes.push(gate, silent, monitor)
+
+    gate.port.onmessage = (event: MessageEvent<{ open?: boolean; level?: number }>) => {
+      if (typeof event.data.open === 'boolean') {
+        this.gateOpen = event.data.open
+        this.applySendState()
+      }
+      if (typeof event.data.level === 'number') this.micDb = event.data.level
+      this.emit()
+    }
+
+    this.graph = { nodes, gate, monitor, rnnoise }
+    this.gateOpen = true
+    this.configureGate()
+    return track
+  }
+
+  private configureGate(): void {
+    this.graph?.gate.port.postMessage({
+      enabled: this.settings.gateEnabled,
+      threshold: this.settings.gateThresholdDb,
+      meter: this.wanted && document.visibilityState === 'visible'
+    })
+    if (!this.settings.gateEnabled) this.gateOpen = true
+  }
+
+  /** The outgoing track carries sound only when unmuted and the gate is open. */
+  private applySendState(): void {
+    const open = !this.settings.gateEnabled || this.gateOpen
+    if (this.sendTrack) this.sendTrack.enabled = !this.muted && open
+    if (this.graph) this.graph.monitor.gain.value = this.testing && open ? 1 : 0
+  }
+
+  /** Lets the user hear their own microphone, exactly as others would. */
+  setTesting(testing: boolean): void {
+    this.testing = testing && this.graph !== null
+    this.applySendState()
+    this.emit()
+  }
+
+  private applyContextSink(): void {
+    const context = this.audioContext as SinkContext | null
+    const id = this.settings.outputId
+    context?.setSinkId?.(id === 'default' ? '' : id).catch(() => {
+      /* output unplugged: stay on the default one */
+    })
   }
 
   private async acquireMic(): Promise<void> {
-    const { inputId, echoCancellation, noiseSuppression, autoGainControl } = this.settings
+    const { inputId, echoCancellation, autoGainControl } = this.settings
+    // RNNoise replaces the built-in suppression; running both only degrades the voice.
+    const noiseSuppression = this.settings.noiseSuppression && !this.settings.enhancedSuppression
     const audio: MediaTrackConstraints = {
       echoCancellation,
       noiseSuppression,
@@ -264,12 +442,15 @@ export class VoiceEngine {
       stream = await navigator.mediaDevices.getUserMedia({ audio, video: false })
     }
 
-    const track = stream.getAudioTracks()[0]
-    track.enabled = !this.muted
-    track.contentHint = 'speech'
-
     const previous = this.stream
+    const previousSend = this.sendTrack
     this.stream = stream
+    const track = await this.buildGraph(stream)
+    track.contentHint = 'speech'
+    this.sendTrack = track
+    this.sendStream = new MediaStream([track])
+    this.applySendState()
+
     await Promise.all(
       [...this.peers.values()].map(async (peer) => {
         const sender = peer.pc.getSenders().find((s) => s.track?.kind === 'audio' || s.track === null)
@@ -277,7 +458,7 @@ export class VoiceEngine {
       })
     )
     previous?.getTracks().forEach((t) => t.stop())
-    this.attachAnalyser()
+    previousSend?.stop()
   }
 
   async updateSettings(patch: Partial<VoiceSettings>): Promise<void> {
@@ -287,12 +468,21 @@ export class VoiceEngine {
 
     if (patch.outputId !== undefined && patch.outputId !== before.outputId) {
       for (const peer of this.peers.values()) this.applySink(peer.audio)
+      this.applyContextSink()
+    }
+    if (patch.outputVolume !== undefined) {
+      for (const peer of this.peers.values()) this.applyVolume(peer)
+    }
+    if (patch.gateEnabled !== undefined || patch.gateThresholdDb !== undefined) {
+      this.configureGate()
+      this.applySendState()
     }
     const micChanged =
       this.settings.inputId !== before.inputId ||
       this.settings.echoCancellation !== before.echoCancellation ||
       this.settings.noiseSuppression !== before.noiseSuppression ||
-      this.settings.autoGainControl !== before.autoGainControl
+      this.settings.autoGainControl !== before.autoGainControl ||
+      this.settings.enhancedSuppression !== before.enhancedSuppression
     if (micChanged && this.stream) {
       try {
         await this.acquireMic()
@@ -312,7 +502,7 @@ export class VoiceEngine {
 
   setMuted(muted: boolean): void {
     this.muted = muted
-    this.stream?.getAudioTracks().forEach((t) => (t.enabled = !muted))
+    this.applySendState()
     this.sendState()
     this.emit()
   }
@@ -328,8 +518,12 @@ export class VoiceEngine {
     const peer = this.peers.get(id)
     if (!peer) return
     peer.volume = Math.max(0, Math.min(1, volume))
-    peer.audio.volume = peer.volume
+    this.applyVolume(peer)
     this.emit()
+  }
+
+  private applyVolume(peer: Peer): void {
+    peer.audio.volume = Math.max(0, Math.min(1, peer.volume * this.settings.outputVolume))
   }
 
   private applySink(audio: HTMLAudioElement): void {
@@ -430,6 +624,7 @@ export class VoiceEngine {
     const audio = new Audio()
     audio.autoplay = true
     audio.muted = this.deafened
+    audio.volume = this.settings.outputVolume
     this.applySink(audio)
 
     const peer: Peer = {
@@ -446,8 +641,7 @@ export class VoiceEngine {
     }
     this.peers.set(info.id, peer)
 
-    const track = this.stream?.getAudioTracks()[0]
-    if (track && this.stream) pc.addTrack(track, this.stream)
+    if (this.sendTrack && this.sendStream) pc.addTrack(this.sendTrack, this.sendStream)
 
     pc.onicecandidate = (event) => {
       this.signal(info.id, { kind: 'candidate', candidate: event.candidate ? { ...event.candidate.toJSON() } : null })
@@ -529,49 +723,24 @@ export class VoiceEngine {
 
   // ----- Levels and statistics (only while the window is visible) -----
 
-  private attachAnalyser(): void {
-    this.detachAnalyser()
-    if (!this.stream || document.visibilityState !== 'visible') return
-    this.audioContext ??= new AudioContext({ latencyHint: 'playback' })
-    if (this.audioContext.state === 'suspended') void this.audioContext.resume()
-    this.analyser = this.audioContext.createAnalyser()
-    this.analyser.fftSize = 512
-    this.analyserData = new Float32Array(this.analyser.fftSize)
-    this.analyserSource = this.audioContext.createMediaStreamSource(this.stream)
-    this.analyserSource.connect(this.analyser)
-  }
-
-  private detachAnalyser(): void {
-    this.analyserSource?.disconnect()
-    this.analyserSource = null
-    this.analyser = null
-    if (this.audioContext && this.audioContext.state === 'running') void this.audioContext.suspend()
-  }
-
-  /** Measurements only run while the window is shown: nothing in the background. */
+  /**
+   * Level meters and statistics only run while the window is shown. The gate itself
+   * keeps working in the background: it lives on the audio thread.
+   */
   private updateTicker(): void {
     const shouldRun = this.wanted && document.visibilityState === 'visible'
+    this.configureGate()
     if (shouldRun && this.ticker === null) {
-      this.attachAnalyser()
       this.ticker = window.setInterval(() => void this.onTick(), LEVEL_INTERVAL_MS)
     } else if (!shouldRun && this.ticker !== null) {
       window.clearInterval(this.ticker)
       this.ticker = null
-      this.detachAnalyser()
-      this.micLevel = 0
+      this.micDb = SILENCE_DB
     }
   }
 
   private async onTick(): Promise<void> {
     this.tick++
-    if (this.analyser && this.analyserData && !this.muted) {
-      this.analyser.getFloatTimeDomainData(this.analyserData)
-      let sum = 0
-      for (const sample of this.analyserData) sum += sample * sample
-      this.micLevel = Math.min(1, Math.sqrt(sum / this.analyserData.length) * 4)
-    } else {
-      this.micLevel = 0
-    }
     await this.collectStats(this.tick % STATS_EVERY_N_TICKS === 0)
     this.emit()
   }
@@ -607,7 +776,8 @@ export class VoiceEngine {
         concealedSamples: inbound.concealedSamples ?? 0,
         totalSamplesReceived: inbound.totalSamplesReceived ?? 0,
         packetsSent: outbound.packetsSent ?? 0,
-        bytesSent: outbound.bytesSent ?? 0
+        bytesSent: outbound.bytesSent ?? 0,
+        audioEnergy: inbound.totalAudioEnergy ?? 0
       }
       const prev = peer.counters
       peer.counters = now
@@ -631,6 +801,7 @@ export class VoiceEngine {
         concealedPct: samples > 0 ? ((now.concealedSamples - prev.concealedSamples) / samples) * 100 : null,
         frameMs: sent > 0 ? (seconds * 1000) / sent : null,
         sendKbps: seconds > 0 ? ((now.bytesSent - prev.bytesSent) * 8) / seconds / 1000 : null,
+        energy: seconds > 0 ? (now.audioEnergy - prev.audioEnergy) / seconds : null,
         route: local && remote ? `${local.candidateType} ↔ ${remote.candidateType}` : null,
         codec: codec?.mimeType ? String(codec.mimeType).replace('audio/', '') : null
       }

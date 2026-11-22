@@ -12,6 +12,8 @@ const e2e = process.env.DUO_E2E_NAME
       name: process.env.DUO_E2E_NAME,
       server: process.env.DUO_E2E_SERVER ?? '',
       code: process.env.DUO_E2E_CODE ?? '',
+      enhanced: Boolean(process.env.DUO_E2E_ENHANCED),
+      gateDb: process.env.DUO_E2E_GATE ? Number(process.env.DUO_E2E_GATE) : null,
       durationMs: Number(process.env.DUO_E2E_DURATION ?? 8000)
     }
   : null
@@ -246,7 +248,8 @@ if (process.env.DUO_PROBE_UPDATE) {
       if (config.role === 'host') await startHosting()
     } else if (process.env.DUO_E2E_HOST_PORT) {
       // Test: this instance hosts the server itself, like a real host would.
-      server = await startDuoServer({ code: e2e.code, port: Number(process.env.DUO_E2E_HOST_PORT) })
+      // Loopback only, so no firewall prompt can appear during a test run.
+      server = await startDuoServer({ code: e2e.code, port: Number(process.env.DUO_E2E_HOST_PORT), host: '127.0.0.1' })
     }
 
     registerIpc()
