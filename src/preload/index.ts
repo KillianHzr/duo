@@ -25,6 +25,9 @@ const api = {
   resetRole: (): Promise<AppState> => ipcRenderer.invoke('duo:reset-role'),
   setAutostart: (enabled: boolean): Promise<AppState> => ipcRenderer.invoke('duo:set-autostart', enabled),
 
+  /** Store builds: opens the Windows page where starting with the computer is switched on or off. */
+  openStartupSettings: (): void => ipcRenderer.send('duo:open-startup-settings'),
+
   /** Fires when the user clicks the window's close button and has not picked a default yet. */
   onCloseRequested: (listener: () => void): (() => void) => {
     const handler = (): void => listener()

@@ -61,6 +61,7 @@
       "publisherDisplayName": "KillianHzr",
       "applicationId": "Duo",
       "displayName": "Duo",
+      "addAutoLaunchExtension": true,
       "languages": [
         "en-US",
         "fr-FR"

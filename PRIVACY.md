@@ -8,7 +8,7 @@ conversations and your data stay on your own computers.
 - It has no account, no sign-up and no advertising.
 - It collects no personal data, no usage statistics and no crash reports.
 - It never sends your voice, your name or your settings to the developer or to any third party.
-- It never records your conversations.
+- It never records your voice conversations.
 
 ## What stays on your network
 
@@ -17,6 +17,10 @@ conversations and your data stay on your own computers.
 - **Your first name and your mute status** are sent to the computer hosting the call, on your
   local network, so the other people in the call can see who is there.
 - **The access code** you type is sent to the hosting computer to let you in.
+- **Chat messages, the files you send and shared notes** are sent to the hosting computer, on your
+  local network, and kept there in a folder its owner chooses. People in the call can read them.
+  If the host turns on the daily backup, a copy goes to the folder the host picked; where that
+  folder is synced to (a cloud drive, for example) is the host's choice.
 
 The hosting computer only accepts connections from local-network addresses.
 
@@ -39,6 +43,12 @@ Duo is not designed to make any other connection to the Internet.
 
 Duo uses your microphone only while the app is connected to a call, and only to send your voice to
 the other people in that call.
+
+## Push to talk
+
+If you turn on push to talk, Duo watches the one key or mouse button you chose, system-wide, to know
+when you hold it. It does not record or send what you type. With push to talk off, Duo does not
+watch the keyboard or the mouse.
 
 ## Contact
 

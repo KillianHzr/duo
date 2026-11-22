@@ -398,7 +398,12 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
             onChange={(autoGainControl) => void engine.updateSettings({ autoGainControl })}
           />
           <Toggle label={t('showStats')} checked={showStats} onChange={setShowStats} />
-          {!app.store && (
+          {app.store ? (
+            <label>
+              {t('autostartStore')}
+              <button onClick={() => window.duo.openStartupSettings()}>{t('autostartOpen')}</button>
+            </label>
+          ) : (
             <Toggle
               label={t('autostart')}
               checked={app.autostart}

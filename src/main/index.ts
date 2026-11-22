@@ -265,6 +265,11 @@ function registerIpc(): void {
     return appState()
   })
 
+  // Store builds start with Windows through a startup task that the user switches in Windows itself.
+  ipcMain.on('duo:open-startup-settings', () => {
+    if (process.platform === 'win32') void shell.openExternal('ms-settings:startupapps')
+  })
+
   const isCloseAction = (value: unknown): value is CloseAction => value === 'ask' || value === 'tray' || value === 'quit'
 
   ipcMain.handle('duo:set-close-action', (_event, action: unknown) => {

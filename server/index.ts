@@ -2,6 +2,7 @@
  * Standalone Duo server, for hosting without the desktop app (e.g. on a home server).
  * Usage: npm run server            — reuses or creates an access code in ~/.duo/code
  *        DUO_CODE=ABC234 npm run server
+ *        DUO_DATA=/path/to/folder npm run server   — where chat, notes and media are kept (default ~/.duo/data)
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -25,6 +26,8 @@ const stamp = (): string => new Date().toISOString().slice(11, 19)
 
 startDuoServer({
   code,
+  // Chat messages, notes and media are kept here.
+  dataDir: process.env.DUO_DATA ?? join(homedir(), '.duo', 'data'),
   port: Number(process.env.DUO_PORT ?? DUO_PORT),
   log: (message) => console.log(stamp(), message)
 })

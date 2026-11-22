@@ -12,12 +12,15 @@ the computers — it never leaves your network.
 - **Microphone controls**: a sensitivity threshold that cuts clicks and breathing while you are not
   talking (it adds no delay), optional enhanced noise suppression (RNNoise), a microphone test and an
   output volume.
+- **Push to talk**, optional, with any key or side mouse button; it works while a game has the focus.
+- **Chat** with text, links, photos, videos and files, and **shared notes**. Everything is kept on the
+  host computer, in a folder the host chooses, with an optional daily copy to another folder (for
+  example one synced by a cloud drive).
 - **Stays out of the way**: lives in the tray and does no drawing or measuring while hidden.
 - **Private by default**: only accepts local-network addresses, and joining requires an access code.
 - **Updates itself** from GitHub Releases.
 - English and French interface, following the system language.
 
-> Status: early. Voice works; text chat, media sharing and shared notes are planned.
 
 ## Install
 
@@ -54,11 +57,13 @@ Wired headsets (or 2.4 GHz dongles) keep the delay low; Bluetooth headsets add 1
                           (direct)
 ```
 
-- `src/server/` — the introduction server: UDP discovery, access code, WebRTC signaling over WebSocket
-  (port 47800, TCP and UDP). It runs inside the app in host mode, or standalone with `npm run server`.
-- `src/main/` — Electron main process: window, tray, discovery, hosting, auto-update.
-- `src/renderer/` — React interface and the voice engine (`voice.ts`, Opus tuning in `sdp.ts`,
-  microphone gate in `public/gate-processor.js`).
+- `src/server/` — the host's server: UDP discovery, access code, WebRTC signaling, chat and notes over
+  WebSocket, media files over HTTP (port 47800, TCP and UDP). It runs inside the app in host mode, or
+  standalone with `npm run server`. `store.ts` keeps messages, notes and media as plain files.
+- `src/main/` — Electron main process: window, tray, discovery, hosting, backup, push-to-talk key,
+  auto-update.
+- `src/renderer/` — React interface, the voice engine (`voice.ts`, Opus tuning in `sdp.ts`,
+  microphone gate in `public/gate-processor.js`), chat and notes (`space.ts`).
 - `src/shared/protocol.ts` — messages exchanged between app and server.
 
 ## Develop
@@ -68,7 +73,7 @@ Requires Node.js 20 or later.
 ```sh
 npm install
 npm run dev          # run the app with hot reload
-npm test             # type check, server tests, microphone gate tests
+npm test             # type check, server, chat and notes, microphone gate tests
 npm run build && npm run test:voice   # five hidden app instances, fake microphone, muted output
 npm run dist         # build an installer into dist/
 npm run dist:store   # build the Microsoft Store package (Windows only)
@@ -78,7 +83,7 @@ Releases are built by GitHub Actions when a `v*` tag is pushed.
 
 ## Privacy
 
-Duo collects nothing and your voice never leaves your network. See the [privacy policy](PRIVACY.md).
+Duo collects nothing; your voice, messages, files and notes never leave your network. See the [privacy policy](PRIVACY.md).
 
 ## License
 
