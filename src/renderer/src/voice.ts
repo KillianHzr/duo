@@ -152,6 +152,7 @@ const EMPTY_STATS: PeerStats = {
 }
 
 const LEVEL_INTERVAL_MS = 150
+const LEVEL_MIN_GAP_MS = 95
 const STATS_EVERY_N_TICKS = 7 // ≈ 1 s
 
 type SinkContext = AudioContext & { setSinkId?: (id: string) => Promise<void> }
@@ -244,10 +245,24 @@ export class VoiceEngine {
 
   getLevels = (): Levels => this.levels
 
+  private levelsKey = ''
+  private levelsAt = 0
+
+  /**
+   * Every change to a meter makes the window draw a frame. So levels are rounded to steps the
+   * eye can tell apart, published at most ten times a second, and not at all while nothing
+   * moves: a silent call draws nothing.
+   */
   private emitLevels(): void {
+    const micDb = Math.round(this.micDb)
     const peers: Record<string, number> = {}
-    for (const [id, peer] of this.peers) peers[id] = peer.level
-    this.levels = { micDb: this.micDb, peers }
+    for (const [id, peer] of this.peers) peers[id] = Math.round(peer.level * 40) / 40
+    const key = `${micDb} ${JSON.stringify(peers)}`
+    const now = performance.now()
+    if (key === this.levelsKey || now - this.levelsAt < LEVEL_MIN_GAP_MS) return
+    this.levelsKey = key
+    this.levelsAt = now
+    this.levels = { micDb, peers }
     for (const listener of this.levelListeners) listener()
   }
 

@@ -140,7 +140,6 @@ header {
   font-weight: 600;
   font-size: 17px;
   outline: 3px solid transparent;
-  transition: outline-color 0.1s;
 }
 
 .avatar.speaking {
@@ -167,13 +166,13 @@ header {
   overflow: hidden;
 }
 
-/* Meters grow with a transform: the graphics card stretches them, nothing is laid out again. */
+/* Meters grow with a transform, so nothing is laid out again, and jump straight to their value:
+   an animated meter would make the window draw at the screen's full refresh rate, all the time. */
 .meter > div {
   height: 100%;
   background: var(--ok);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 0.12s linear;
 }
 
 .volume {
@@ -269,7 +268,6 @@ header {
   background: var(--ok);
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 0.06s linear;
 }
 
 .threshold-meter .fill.closed {
