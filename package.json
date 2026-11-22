@@ -34,6 +34,7 @@
       "output": "dist",
       "buildResources": "build"
     },
+    "npmRebuild": false,
     "files": [
       "out/**/*"
     ],
@@ -69,6 +70,7 @@
   },
   "dependencies": {
     "electron-updater": "^6.8.11",
+    "uiohook-napi": "^1.5.5",
     "ws": "^8.23.0"
   },
   "devDependencies": {

@@ -10,6 +10,7 @@ import { RnnoiseWorkletNode, loadRnnoise } from '@sapphi-red/web-noise-suppresso
 import rnnoiseWorkletUrl from '@sapphi-red/web-noise-suppressor/rnnoiseWorklet.js?url'
 import rnnoiseWasmUrl from '@sapphi-red/web-noise-suppressor/rnnoise.wasm?url'
 import rnnoiseSimdWasmUrl from '@sapphi-red/web-noise-suppressor/rnnoise_simd.wasm?url'
+import type { PttBinding } from '../../shared/keys'
 import { tuneOpus } from './sdp'
 
 export interface VoiceSettings {
@@ -26,6 +27,9 @@ export interface VoiceSettings {
   gateThresholdDb: number
   /** Master volume for everyone else, 0 to 1. */
   outputVolume: number
+  /** Push-to-talk: nothing is sent unless the chosen key is held down. */
+  pttEnabled: boolean
+  pttBinding: PttBinding | null
 }
 
 export const DEFAULT_SETTINGS: VoiceSettings = {
@@ -37,8 +41,13 @@ export const DEFAULT_SETTINGS: VoiceSettings = {
   enhancedSuppression: false,
   gateEnabled: false,
   gateThresholdDb: -45,
-  outputVolume: 1
+  outputVolume: 1,
+  pttEnabled: false,
+  pttBinding: null
 }
+
+/** The microphone stays open this long after the push-to-talk key is released, so word endings are not cut. */
+const PTT_RELEASE_MS = 200
 
 export const SILENCE_DB = -100
 
@@ -87,6 +96,8 @@ export interface VoiceSnapshot {
   gateOpen: boolean
   /** True while the user is listening to their own microphone. */
   testing: boolean
+  /** True while the push-to-talk key is held (or was just released). */
+  pttDown: boolean
   peers: PeerView[]
   inputs: MediaDeviceInfo[]
   outputs: MediaDeviceInfo[]
@@ -160,6 +171,8 @@ export class VoiceEngine {
   private micDb = SILENCE_DB
   private gateOpen = true
   private testing = false
+  private pttDown = false
+  private pttTimer: number | null = null
   private settings: VoiceSettings
   /** Raw microphone capture. */
   private stream: MediaStream | null = null
@@ -228,6 +241,7 @@ export class VoiceEngine {
       micDb: this.micDb,
       gateOpen: this.gateOpen,
       testing: this.testing,
+      pttDown: this.pttDown,
       peers: [...this.peers.values()].map((p) => ({
         ...p.info,
         connection: p.pc.connectionState,
@@ -411,9 +425,29 @@ export class VoiceEngine {
 
   /** The outgoing track carries sound only when unmuted and the gate is open. */
   private applySendState(): void {
-    const open = !this.settings.gateEnabled || this.gateOpen
+    const talking = !this.settings.pttEnabled || this.pttDown
+    const open = talking && (!this.settings.gateEnabled || this.gateOpen)
     if (this.sendTrack) this.sendTrack.enabled = !this.muted && open
     if (this.graph) this.graph.monitor.gain.value = this.testing && open ? 1 : 0
+  }
+
+  /** Called when the push-to-talk key goes down or up. */
+  setPttDown(down: boolean): void {
+    if (this.pttTimer !== null) window.clearTimeout(this.pttTimer)
+    this.pttTimer = null
+    if (down) {
+      this.pttDown = true
+    } else if (this.pttDown) {
+      this.pttTimer = window.setTimeout(() => {
+        this.pttTimer = null
+        this.pttDown = false
+        this.applySendState()
+        this.emit()
+      }, PTT_RELEASE_MS)
+      return
+    }
+    this.applySendState()
+    this.emit()
   }
 
   /** Lets the user hear their own microphone, exactly as others would. */
@@ -486,6 +520,7 @@ export class VoiceEngine {
     if (patch.outputVolume !== undefined) {
       for (const peer of this.peers.values()) this.applyVolume(peer)
     }
+    if (patch.pttEnabled !== undefined) this.applySendState()
     if (patch.gateEnabled !== undefined || patch.gateThresholdDb !== undefined) {
       this.configureGate()
       this.applySendState()

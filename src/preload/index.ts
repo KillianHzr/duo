@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type { AppState } from '../main/index'
 import type { CloseAction } from '../main/config'
 import type { UpdateStatus } from '../main/updater'
+import type { PttBinding } from '../shared/keys'
 
 export interface E2EConfig {
   name: string
@@ -47,6 +48,14 @@ const api = {
   },
   /** Saves a file from the chat to a place the user picks. */
   download: (url: string): void => ipcRenderer.send('duo:download', url),
+
+  /** Watches a key system-wide for push-to-talk (null stops). False if the system refuses. */
+  setPtt: (binding: Pick<PttBinding, 'kind' | 'code'> | null): Promise<boolean> => ipcRenderer.invoke('duo:set-ptt', binding),
+  onPtt: (listener: (down: boolean) => void): (() => void) => {
+    const handler = (_event: unknown, down: boolean): void => listener(down)
+    ipcRenderer.on('duo:ptt', handler)
+    return () => ipcRenderer.removeListener('duo:ptt', handler)
+  },
 
   getUpdateStatus: (): Promise<UpdateStatus> => ipcRenderer.invoke('duo:update-status'),
   onUpdateStatus: (listener: (status: UpdateStatus) => void): (() => void) => {

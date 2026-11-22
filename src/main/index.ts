@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { moveData, runBackup } from './backup'
 import { discoverServers } from './discovery'
+import { setPushToTalk, stopPushToTalk } from './ptt'
 import { DEFAULTS, loadConfig, saveConfig, type BackupResult, type CloseAction, type DuoConfig } from './config'
 import { getUpdateStatus, installUpdateNow, probeUpdate, startAutoUpdate } from './updater'
 import { generateCode, startDuoServer, type DuoServer } from '../server/duo-server'
@@ -331,6 +332,17 @@ function registerIpc(): void {
     }
   })
 
+  // Push-to-talk: watch the chosen key system-wide and tell the window when it goes down or up.
+  ipcMain.handle('duo:set-ptt', (_event, binding: unknown) => {
+    const valid =
+      typeof binding === 'object' &&
+      binding !== null &&
+      ((binding as { kind?: unknown }).kind === 'key' || (binding as { kind?: unknown }).kind === 'mouse') &&
+      Number.isInteger((binding as { code?: unknown }).code)
+    const { kind, code } = (valid ? binding : {}) as { kind: 'key' | 'mouse'; code: number }
+    return setPushToTalk(valid ? { kind, code } : null, (down) => mainWindow?.webContents.send('duo:ptt', down))
+  })
+
   ipcMain.handle('duo:update-status', () => getUpdateStatus())
   ipcMain.on('duo:install-update', () => {
     quitting = true
@@ -393,6 +405,7 @@ if (process.env.DUO_PROBE_UPDATE) {
 
   app.on('before-quit', () => {
     quitting = true
+    stopPushToTalk()
   })
 
   app.on('window-all-closed', () => {

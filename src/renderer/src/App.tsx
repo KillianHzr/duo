@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
+import { bindingFromKey, bindingFromMouse, type PttBinding } from '../../shared/keys'
 import { CODE_LENGTH, DUO_PORT, normalizeCode } from '../../shared/protocol'
 import type { AppState, CloseAction, UpdateStatus } from '../../preload/index'
 import { t, type MessageKey } from './i18n'
@@ -104,6 +105,18 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
       stopState()
     }
   }, [])
+
+  // Push-to-talk: the main process watches the key, even while a game has the focus.
+  const [pttFailed, setPttFailed] = useState(false)
+  const { pttEnabled, pttBinding } = voice.settings
+  useEffect(() => window.duo.onPtt((down) => engine.setPttDown(down)), [engine])
+  useEffect(() => {
+    const binding = pttEnabled && pttBinding ? { kind: pttBinding.kind, code: pttBinding.code } : null
+    void window.duo.setPtt(binding).then((ok) => {
+      setPttFailed(!ok)
+      if (!ok) void engine.updateSettings({ pttEnabled: false })
+    })
+  }, [engine, pttEnabled, pttBinding?.kind, pttBinding?.code]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const role = app?.role ?? null
   const code = app?.code ?? ''
@@ -217,7 +230,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   }
 
   /** False while the sensitivity gate keeps the microphone shut. */
-  const sending = !voice.settings.gateEnabled || voice.gateOpen
+  const sending = (!voice.settings.gateEnabled || voice.gateOpen) && (!pttEnabled || voice.pttDown)
 
   const statusLabel: Record<typeof voice.status, string> = {
     idle: t('searching'),
@@ -351,6 +364,12 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
               {voice.settings.gateEnabled ? `${t('gateThreshold')} ${voice.settings.gateThresholdDb} dB` : t('gateOff')}
             </span>
           </div>
+          <PushToTalk
+            enabled={pttEnabled}
+            binding={pttBinding}
+            failed={pttFailed}
+            onChange={(patch) => void engine.updateSettings(patch)}
+          />
           <button className={voice.testing ? 'toggle on' : 'toggle'} onClick={() => engine.setTesting(!voice.testing)}>
             {voice.testing ? t('micTestStop') : t('micTest')}
           </button>
@@ -487,6 +506,63 @@ function CodeForm(props: { error: string | null; onSubmit: (code: string) => voi
         {t('back')}
       </button>
     </form>
+  )
+}
+
+/** Push-to-talk switch and the key it uses. Turning it on without a key asks for one first. */
+function PushToTalk(props: {
+  enabled: boolean
+  binding: PttBinding | null
+  failed: boolean
+  onChange: (patch: { pttEnabled?: boolean; pttBinding?: PttBinding }) => void
+}) {
+  const [capturing, setCapturing] = useState(false)
+
+  useEffect(() => {
+    if (!capturing) return
+    const pick = (binding: PttBinding | null): void => {
+      setCapturing(false)
+      if (binding) props.onChange({ pttBinding: binding, pttEnabled: true })
+    }
+    const onKey = (event: KeyboardEvent): void => {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.code === 'Escape') return setCapturing(false)
+      const binding = bindingFromKey(event)
+      if (binding) pick(binding)
+    }
+    const onMouse = (event: MouseEvent): void => {
+      const binding = bindingFromMouse(event.button)
+      if (!binding) return setCapturing(false)
+      event.preventDefault()
+      pick(binding)
+    }
+    window.addEventListener('keydown', onKey, true)
+    window.addEventListener('mousedown', onMouse, true)
+    return () => {
+      window.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('mousedown', onMouse, true)
+    }
+  }, [capturing]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="storage">
+      <Toggle
+        label={t('ptt')}
+        hint={t('pttHint')}
+        checked={props.enabled}
+        onChange={(enabled) => {
+          if (enabled && !props.binding) setCapturing(true)
+          else props.onChange({ pttEnabled: enabled })
+        }}
+      />
+      {(props.enabled || capturing) && (
+        <button className={capturing ? 'toggle on-accent' : 'toggle'} onClick={() => setCapturing((value) => !value)}>
+          {capturing ? t('pttPress') : t('pttKey', { key: props.binding?.label ?? '—' })}
+        </button>
+      )}
+      {props.failed && <span className="small warn">{t('pttUnavailable')}</span>}
+    </div>
   )
 }
 
