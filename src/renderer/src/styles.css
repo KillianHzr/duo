@@ -1,20 +1,21 @@
 :root {
-  /* A dusk-blue room lit by one warm light. */
-  --bg-0: #20242e;
-  --bg-1: #2b303c;
-  --bg-2: #323846;
-  --bg-3: #3a4050;
-  --bg-4: #474e60;
-  --line: rgb(233 230 223 / 10%);
-  --text: #e9e6df;
-  --muted: #9198a8;
-  /* The warm light: actions, and the fire when someone talks. Text on it is dark. */
-  --accent: #ffc978;
-  --accent-ink: #20242e;
-  --ember: #4a4234;
-  --ok: #9fd6a6;
+  /* Plain dark greys; the only colours are the faces of the people in the call. */
+  --bg-0: #1c1d20;
+  --bg-1: #25262a;
+  --bg-2: #2c2d32;
+  --bg-3: #35363c;
+  --bg-4: #42434a;
+  --line: rgb(255 255 255 / 9%);
+  --text: #ececee;
+  --muted: #9c9da6;
+  /* Actions are off-white, with dark text on them. */
+  --accent: #f0f0ee;
+  --accent-ink: #1c1d20;
+  /* The fire, lit while someone talks. */
+  --ember: #44454d;
+  --ok: #6fcf8e;
   --warn: #f0c36a;
-  --danger: #ec6f6a;
+  --danger: #ed5d5f;
   --radius: 14px;
   --radius-l: 22px;
   color-scheme: dark;
@@ -553,22 +554,22 @@ button.person[aria-expanded='true'] .avatar {
 }
 
 .hue-0 {
-  --c: #ffc978;
+  --c: #f2c078;
 }
 .hue-1 {
-  --c: #8fb8c9;
+  --c: #8db4e8;
 }
 .hue-2 {
-  --c: #a9cfa4;
+  --c: #8fd3a6;
 }
 .hue-3 {
-  --c: #e8a9b8;
+  --c: #f0a3b5;
 }
 .hue-4 {
-  --c: #b9aee0;
+  --c: #b7a8f0;
 }
 .hue-5 {
-  --c: #e6c9a0;
+  --c: #f0a988;
 }
 
 .who {
@@ -1015,9 +1016,7 @@ input.code-input {
 
 /* The conversation stays a readable column however wide the window is. */
 .messages > *,
-.composer > *,
-.chat > .notice,
-.chat > .upload {
+.composer > * {
   width: 100%;
   max-width: 760px;
   margin-inline: auto;
