@@ -54,8 +54,8 @@ export const FACES: Face[] = [
     art: `<path d="M15 78 Q15 40 50 40 Q85 40 85 78 Q85 83 80 83 H20 Q15 83 15 78 Z" fill="#8fa58c"/><path d="M17 62 Q15 37 50 35 Q85 37 83 62 Q75 53 66 60 Q58 67 50 59 Q42 52 34 60 Q25 67 17 62 Z" fill="#b7c9a8"/><circle cx="62" cy="31" r="5.5" fill="#f0795a"/><circle cx="62" cy="31" r="2" fill="${CREAM}"/>${sleepyEyes(40, 60, 70, 6)}`
   },
   {
-    name: 'Bivouac',
-    art: `<path d="M50 18 L86 80 H14 Z" fill="#e39a5c" stroke="#e39a5c" stroke-width="9" stroke-linejoin="round"/><path d="M50 46 L64 82 H36 Z" fill="#a5673a"/><path d="M50 46 L29 82 H40 Z" fill="#f2bd8c"/>${eyes(44, 56, 36, 3.2, 4.2)}`
+    name: 'Fanal',
+    art: `<g transform="rotate(9 50 22)"><path d="M38 23 C36 5 62 5 62 23" fill="none" stroke="#e39a5c" stroke-width="4.5" stroke-linecap="round"/></g><rect x="30" y="20" width="40" height="10" rx="5" fill="#e39a5c"/><rect x="23" y="27" width="54" height="52" rx="14" fill="#e39a5c"/><rect x="30" y="34" width="40" height="38" rx="9" fill="#f6dcae"/><rect x="28" y="77" width="44" height="9" rx="4.5" fill="#c97f45"/>${eyes(43, 57, 50, 3.8, 4.8)}${smile(50, 59, 5)}`
   },
   {
     name: 'Quart',
