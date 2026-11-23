@@ -81,10 +81,10 @@ export function hue(name: string): number {
   return sum % HUES
 }
 
-export function Avatar({ name, speaking, small }: { name: string; speaking?: boolean; small?: boolean }) {
+export function Avatar({ name, speaking }: { name: string; speaking?: boolean }) {
   return (
-    <div className={`avatar hue-${hue(name)}${speaking ? ' speaking' : ''}${small ? ' small-avatar' : ''}`} aria-hidden>
+    <span className={`avatar hue-${hue(name)}${speaking ? ' speaking' : ''}`} aria-hidden>
       {name.trim().slice(0, 1).toUpperCase()}
-    </div>
+    </span>
   )
 }

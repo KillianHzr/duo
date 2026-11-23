@@ -154,6 +154,8 @@ const EMPTY_STATS: PeerStats = {
 const LEVEL_INTERVAL_MS = 150
 const LEVEL_MIN_GAP_MS = 95
 const STATS_EVERY_N_TICKS = 7 // ≈ 1 s
+/** The delay shown next to each person is refreshed at this slower pace, which costs next to nothing. */
+const SLOW_STATS_EVERY_N_TICKS = 20 // ≈ 3 s
 
 type SinkContext = AudioContext & { setSinkId?: (id: string) => Promise<void> }
 type SinkAudio = HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }
@@ -838,7 +840,7 @@ export class VoiceEngine {
 
   /**
    * Levels come from a cheap synchronous read, several times a second, and only wake the meters.
-   * Network figures need a full statistics report, so they are only collected while displayed.
+   * Network figures need a full statistics report, so they are collected far less often.
    */
   private onTick(): void {
     this.tick++
@@ -847,19 +849,13 @@ export class VoiceEngine {
       peer.level = Math.min(1, (source?.audioLevel ?? 0) * 4)
     }
     this.emitLevels()
-    if (this.statsEnabled && this.tick % STATS_EVERY_N_TICKS === 0) void this.collectStats().then(() => this.emit())
+    const every = this.statsEnabled ? STATS_EVERY_N_TICKS : SLOW_STATS_EVERY_N_TICKS
+    if (this.peers.size > 0 && this.tick % every === 0) void this.collectStats().then(() => this.emit())
   }
 
-  /** Turns the network measurements on or off (they cost a little, so only while shown). */
+  /** Refreshes the network measurements every second instead of every few seconds, while they are shown in full. */
   setStatsEnabled(enabled: boolean): void {
     this.statsEnabled = enabled
-    if (!enabled) {
-      for (const peer of this.peers.values()) {
-        peer.stats = EMPTY_STATS
-        peer.counters = null
-      }
-      this.emit()
-    }
   }
 
   /** Computes network figures over the elapsed interval. */

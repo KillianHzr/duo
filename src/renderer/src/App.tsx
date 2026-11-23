@@ -9,11 +9,10 @@ import { Avatar, Icon } from './icons'
 import type { Space } from './space'
 import type { Levels, PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
 
-type Tab = 'voice' | 'chat' | 'notes'
+type Panel = 'chat' | 'notes'
 
 const GATE_MIN_DB = -80
 const GATE_MAX_DB = -10
-const WIDE = '(min-width: 720px)'
 
 /** Maps a level in dBFS onto the 0..1 width of a meter that spans the gate slider's range. */
 const dbToLevel = (db: number): number => Math.max(0, Math.min(1, (db - GATE_MIN_DB) / (GATE_MAX_DB - GATE_MIN_DB)))
@@ -90,10 +89,19 @@ function ClosePrompt() {
 function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   const voice = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
   const shared = useSyncExternalStore(space.subscribe, space.getSnapshot)
-  const [tab, setTab] = useState<Tab>('voice')
-  // Wide windows show the voice room beside the rest, so it is not a tab of its own there.
-  const wide = useWide()
-  const view: Tab = wide && tab === 'voice' ? 'chat' : tab
+  // The call is always on screen; chat or notes open beside it. A roomy window starts with the chat.
+  const [panel, setPanel] = useState<Panel | null>(() => {
+    const saved = localStorage.getItem('duo.panel')
+    if (saved !== null) return saved === 'chat' || saved === 'notes' ? saved : null
+    return matchMedia('(min-width: 900px)').matches ? 'chat' : null
+  })
+  const togglePanel = (which: Panel): void => {
+    const next = panel === which ? null : which
+    localStorage.setItem('duo.panel', next ?? '')
+    setPanel(next)
+  }
+  /** The person whose volume and measurements are shown, if any. */
+  const [openPeer, setOpenPeer] = useState<string | null>(null)
   const [app, setApp] = useState<AppState | null>(null)
   const [name, setName] = useState(() => localStorage.getItem('duo.name') ?? '')
   const [notFound, setNotFound] = useState(false)
@@ -129,9 +137,9 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
 
   // Network measurements are only taken while they are on screen.
   useEffect(() => {
-    engine.setStatsEnabled(showStats && (wide || tab === 'voice'))
+    engine.setStatsEnabled(showStats && openPeer !== null)
     return () => engine.setStatsEnabled(false)
-  }, [engine, showStats, tab, wide])
+  }, [engine, showStats, openPeer])
 
   const role = app?.role ?? null
   const code = app?.code ?? ''
@@ -258,44 +266,10 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
     error: t('error')
   }
 
-  const selfStatus = voice.deafened ? t('deafened') : voice.muted ? t('muted') : statusLabel[voice.status]
+  const alone = voice.status === 'connected' && voice.peers.length === 0
 
   return (
-    <div className={`app view-${view}`}>
-      <aside className="side">
-        <div className="side-head">
-          <span className="label">{t('voiceRoom')}</span>
-          <span className={`status ${voice.status}`}>{statusLabel[voice.status]}</span>
-        </div>
-        <section className="people">
-          <SelfPerson engine={engine} name={name} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
-          {voice.peers.map((peer) => (
-            <PeerRow key={peer.id} peer={peer} engine={engine} showStats={showStats} />
-          ))}
-          {voice.status === 'connected' && voice.peers.length === 0 && (
-            <div className="empty">
-              <p className="muted small">{t('alone')}</p>
-              {role === 'host' && <AccessCode code={code} />}
-            </div>
-          )}
-        </section>
-      </aside>
-
-      <nav className="tabs">
-        {(['voice', 'chat', 'notes'] as const).map((id) => (
-          <button
-            key={id}
-            className={`tab${view === id ? ' active' : ''}${id === 'voice' ? ' narrow-only' : ''}`}
-            aria-pressed={view === id}
-            onClick={() => setTab(id)}
-          >
-            <Icon name={id} size={18} />
-            {t(id === 'voice' ? 'tabVoice' : id === 'chat' ? 'tabChat' : 'tabNotes')}
-            {id === 'chat' && shared.unread > 0 && <span className="badge">{shared.unread}</span>}
-          </button>
-        ))}
-      </nav>
-
+    <div className={panel ? 'app with-panel' : 'app'}>
       <div className="notices">
         {update.ready && (
           <div className="notice">
@@ -316,39 +290,88 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
         {voice.error && <div className="error">{errorText(voice.error)}</div>}
       </div>
 
-      <main className="main">
-        {view === 'chat' && <Chat space={space} self={name} />}
-        {view === 'notes' && <Notes space={space} self={name} />}
-      </main>
-
-      <div className="userbar">
-        <Avatar name={name} />
-        <div className="who">
-          <strong>{name}</strong>
-          <span className="muted small">{selfStatus}</span>
+      {/* The call is the heart of the app: everyone in it, in the middle of the window. */}
+      <section className="stage">
+        <span className={`status ${voice.status}`}>{statusLabel[voice.status]}</span>
+        <div className="people">
+          <SelfPerson engine={engine} name={name} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
+          {voice.peers.map((peer) => (
+            <PeerRow
+              key={peer.id}
+              peer={peer}
+              engine={engine}
+              showStats={showStats}
+              open={openPeer === peer.id}
+              onToggle={() => setOpenPeer(openPeer === peer.id ? null : peer.id)}
+            />
+          ))}
         </div>
+        {alone && (
+          <div className="invite">
+            <span className="muted">{t('alone')}</span>
+            {role === 'host' && <AccessCode code={code} />}
+          </div>
+        )}
+      </section>
+
+      <div className="dock">
         <button
-          className={voice.muted ? 'icon-btn on' : 'icon-btn'}
+          className={voice.muted ? 'dock-btn on' : 'dock-btn'}
           onClick={() => engine.setMuted(!voice.muted)}
           aria-pressed={voice.muted}
           aria-label={voice.muted ? t('muted') : t('mute')}
           title={voice.muted ? t('muted') : t('mute')}
         >
-          <Icon name={voice.muted ? 'micOff' : 'mic'} />
+          <Icon name={voice.muted ? 'micOff' : 'mic'} size={24} />
         </button>
         <button
-          className={voice.deafened ? 'icon-btn on' : 'icon-btn'}
+          className={voice.deafened ? 'dock-btn on' : 'dock-btn'}
           onClick={() => engine.setDeafened(!voice.deafened)}
           aria-pressed={voice.deafened}
           aria-label={voice.deafened ? t('deafened') : t('deafen')}
           title={voice.deafened ? t('deafened') : t('deafen')}
         >
-          <Icon name={voice.deafened ? 'headphonesOff' : 'headphones'} />
+          <Icon name={voice.deafened ? 'headphonesOff' : 'headphones'} size={24} />
         </button>
-        <button className="icon-btn" onClick={() => setShowSettings(true)} aria-label={t('settings')} title={t('settings')}>
+        <span className="divider" />
+        <button
+          className={panel === 'chat' ? 'dock-btn small-btn active' : 'dock-btn small-btn'}
+          onClick={() => togglePanel('chat')}
+          aria-pressed={panel === 'chat'}
+          aria-label={t('tabChat')}
+          title={t('tabChat')}
+        >
+          <Icon name="chat" />
+          {panel !== 'chat' && shared.unread > 0 && <span className="badge">{shared.unread}</span>}
+        </button>
+        <button
+          className={panel === 'notes' ? 'dock-btn small-btn active' : 'dock-btn small-btn'}
+          onClick={() => togglePanel('notes')}
+          aria-pressed={panel === 'notes'}
+          aria-label={t('tabNotes')}
+          title={t('tabNotes')}
+        >
+          <Icon name="notes" />
+        </button>
+        <button className="dock-btn small-btn" onClick={() => setShowSettings(true)} aria-label={t('settings')} title={t('settings')}>
           <Icon name="settings" />
         </button>
       </div>
+
+      {panel && (
+        <aside className="side-panel">
+          {panel === 'chat' ? (
+            <>
+              <div className="panel-head">
+                <h1>{t('tabChat')}</h1>
+              </div>
+              <Chat space={space} self={name} />
+            </>
+          ) : (
+            <Notes space={space} self={name} />
+          )}
+        </aside>
+      )}
 
       {showSettings && (
         <Settings
@@ -374,18 +397,6 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
       )}
     </div>
   )
-}
-
-/** True when the window is wide enough to show the voice room next to the chat. */
-function useWide(): boolean {
-  const [wide, setWide] = useState(() => matchMedia(WIDE).matches)
-  useEffect(() => {
-    const query = matchMedia(WIDE)
-    const onChange = (): void => setWide(query.matches)
-    query.addEventListener('change', onChange)
-    return () => query.removeEventListener('change', onChange)
-  }, [])
-  return wide
 }
 
 type SettingsSection = 'voice' | 'app' | 'host'
@@ -758,18 +769,27 @@ function AccessCode({ code }: { code: string }) {
   )
 }
 
-function Person(props: { name: string; self?: boolean; level: number; muted: boolean; deafened: boolean; note?: string }) {
+function Person(props: {
+  name: string
+  self?: boolean
+  level: number
+  muted: boolean
+  deafened: boolean
+  note?: string
+  open?: boolean
+  onClick?: () => void
+}) {
   const speaking = props.level > 0.08 && !props.muted
-  return (
-    <div className="person">
+  const content = (
+    <>
       <Avatar name={props.name} speaking={speaking} />
-      <div className="who">
+      <span className="who">
         <strong>
           {props.name}
           {props.self && <span className="muted"> ({t('you')})</span>}
         </strong>
-        {props.note && <span className="muted small">{props.note}</span>}
-      </div>
+        {props.note && <span className="note">{props.note}</span>}
+      </span>
       {props.muted && (
         <span className="flag" title={t('micOff')}>
           <Icon name="micOff" size={16} />
@@ -780,7 +800,14 @@ function Person(props: { name: string; self?: boolean; level: number; muted: boo
           <Icon name="headphonesOff" size={16} />
         </span>
       )}
-    </div>
+    </>
+  )
+  return props.onClick ? (
+    <button className="person" aria-expanded={props.open} onClick={props.onClick}>
+      {content}
+    </button>
+  ) : (
+    <div className="person">{content}</div>
   )
 }
 
@@ -809,27 +836,38 @@ function ThresholdMeter({ engine, sending }: { engine: VoiceEngine; sending: boo
   )
 }
 
-function PeerLevel({ peer, engine, note }: { peer: PeerView; engine: VoiceEngine; note?: string }) {
-  const level = useLevels(engine).peers[peer.id] ?? 0
-  return <Person name={peer.name} level={level} muted={peer.muted} deafened={peer.deafened} note={note} />
+function PeerLevel(props: { peer: PeerView; engine: VoiceEngine; note?: string; open: boolean; onClick: () => void }) {
+  const { peer } = props
+  const level = useLevels(props.engine).peers[peer.id] ?? 0
+  return (
+    <Person name={peer.name} level={level} muted={peer.muted} deafened={peer.deafened} note={props.note} open={props.open} onClick={props.onClick} />
+  )
 }
 
-function PeerRow({ peer, engine, showStats }: { peer: PeerView; engine: VoiceEngine; showStats: boolean }) {
-  const note = CONNECTION_NOTE[peer.connection]
+/** Someone else in the call. Clicking them shows their volume, and the measurements when those are on. */
+function PeerRow(props: { peer: PeerView; engine: VoiceEngine; showStats: boolean; open: boolean; onToggle: () => void }) {
+  const { peer, engine } = props
+  const trouble = CONNECTION_NOTE[peer.connection]
+  const delay = delayMs(peer.stats)
+  const note = trouble ? t(trouble) : delay !== null ? t('delayShort', { ms: String(Math.max(1, Math.round(delay))) }) : undefined
   return (
     <div className="peer">
-      <PeerLevel peer={peer} engine={engine} note={note && t(note)} />
-      <label className="volume" title={t('volume')}>
-        <Icon name="voice" size={16} />
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={Math.round(peer.volume * 100)}
-          onChange={(event) => engine.setPeerVolume(peer.id, Number(event.target.value) / 100)}
-        />
-      </label>
-      {showStats && <Stats stats={peer.stats} />}
+      <PeerLevel peer={peer} engine={engine} note={note} open={props.open} onClick={props.onToggle} />
+      {props.open && (
+        <div className="popover">
+          <label className="volume">
+            <span className="muted small">{t('volume')}</span>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={Math.round(peer.volume * 100)}
+              onChange={(event) => engine.setPeerVolume(peer.id, Number(event.target.value) / 100)}
+            />
+          </label>
+          {props.showStats && <Stats stats={peer.stats} />}
+        </div>
+      )}
     </div>
   )
 }
@@ -837,9 +875,12 @@ function PeerRow({ peer, engine, showStats }: { peer: PeerView; engine: VoiceEng
 const fmt = (value: number | null, digits = 0, unit = ''): string =>
   value === null ? '—' : `${value.toFixed(digits)}${unit}`
 
+/** One-way network trip plus receive buffer. Sound card and headset are not included. */
+const delayMs = (stats: PeerStats): number | null =>
+  stats.rttMs !== null && stats.bufferMs !== null ? stats.rttMs / 2 + stats.bufferMs : null
+
 function Stats({ stats }: { stats: PeerStats }) {
-  // One-way network trip plus receive buffer. Sound card and headset are not included.
-  const delay = stats.rttMs !== null && stats.bufferMs !== null ? stats.rttMs / 2 + stats.bufferMs : null
+  const delay = delayMs(stats)
   return (
     <dl className="stats">
       <dt>{t('statDelay')}</dt>

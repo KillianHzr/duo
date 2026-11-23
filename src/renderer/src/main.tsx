@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './App'
 import { Space } from './space'
 import { DEFAULT_SETTINGS, VoiceEngine, type VoiceSettings } from './voice'
-import '@fontsource-variable/inter'
+import '@fontsource-variable/nunito'
 import './styles.css'
 
 function loadSettings(): VoiceSettings {

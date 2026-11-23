@@ -1,23 +1,24 @@
 :root {
-  --bg-0: #0e0e0d;
-  --bg-1: #161615;
-  --bg-2: #1e1e1c;
-  --bg-3: #292927;
-  --bg-4: #363633;
-  --line: rgb(255 255 255 / 8%);
-  --text: #efefea;
-  --muted: #92928a;
-  /* One accent, used flat. Text on it is dark. */
-  --accent: #cdf25c;
-  --accent-ink: #151514;
-  --warn: #f2b84b;
-  --danger: #ff5a4f;
-  --radius: 10px;
-  --radius-l: 14px;
+  /* Neutral greys; the only colours are the faces of the people in the call. */
+  --bg-0: #18181b;
+  --bg-1: #1f1f23;
+  --bg-2: #27272c;
+  --bg-3: #313137;
+  --bg-4: #3e3e46;
+  --line: rgb(255 255 255 / 9%);
+  --text: #eeeef0;
+  --muted: #9b9ba6;
+  /* Actions are off-white, with dark text on them. */
+  --accent: #f1f1ee;
+  --accent-ink: #18181b;
+  --ok: #8fe3a8;
+  --warn: #f0c36a;
+  --danger: #f0686a;
+  --radius: 14px;
+  --radius-l: 22px;
   color-scheme: dark;
-  font-family: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
-  font-feature-settings: 'cv11', 'ss03';
-  font-size: 14px;
+  font-family: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -47,8 +48,7 @@ body {
 h1 {
   margin: 0;
   font-size: 22px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 800;
 }
 
 h2 {
@@ -107,10 +107,10 @@ a {
   gap: 8px;
   flex-shrink: 0;
   height: env(titlebar-area-height, 0px);
-  padding-left: 14px;
+  padding-left: 16px;
   overflow: hidden;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   -webkit-app-region: drag;
 }
@@ -137,11 +137,11 @@ a {
 button {
   padding: 9px 16px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--bg-3);
   color: var(--text);
   font: inherit;
-  font-weight: 550;
+  font-weight: 700;
   cursor: pointer;
   transition:
     background-color 0.12s,
@@ -209,7 +209,7 @@ button.with-icon {
   width: 36px;
   height: 36px;
   padding: 0;
-  border-radius: 10px;
+  border-radius: 50%;
   background: none;
   color: var(--muted);
 }
@@ -374,80 +374,85 @@ button.choice:hover {
   background: var(--bg-3);
 }
 
-/* ----- Main layout: floating panels, the voice room on the left ----- */
+/* ----- Main layout: the call fills the window; chat and notes open beside it ----- */
 
 .app {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
-  grid-template-areas:
-    'side tabs'
-    'side notices'
-    'side main'
-    'user main';
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
   flex: 1;
   min-height: 0;
-  padding: 8px;
 }
 
-.side,
-.main,
-.userbar,
-.tabs {
-  background: var(--bg-1);
+.app.with-panel {
+  grid-template-columns: minmax(0, 1fr) 380px;
 }
 
-.side,
-.main {
-  border-radius: var(--radius-l);
-  overflow: hidden;
-}
-
-.side {
-  grid-area: side;
+.notices {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
-.side-head {
+.notice,
+.error {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  padding: 16px 16px 8px;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 8px 14px;
 }
 
-.label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+.notice {
+  background: var(--bg-3);
+}
+
+.error {
+  background: var(--danger);
+  color: #fff;
+}
+
+.notice button {
+  padding: 5px 12px;
+}
+
+/* The stage: everyone in the call, in the middle. */
+.stage {
+  grid-column: 1;
+  grid-row: 2;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 40px;
+  min-height: 0;
+  padding: 48px 24px 16px;
+  overflow-y: auto;
 }
 
 .status {
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--bg-3);
-  font-size: 12px;
-  font-weight: 550;
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  color: var(--muted);
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .status::before {
   content: '';
   display: inline-block;
-  width: 7px;
-  height: 7px;
-  margin-right: 7px;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
   border-radius: 50%;
   background: var(--muted);
 }
 
 .status.connected::before {
-  background: var(--accent);
+  background: var(--ok);
 }
 
 .status.connecting::before,
@@ -459,26 +464,15 @@ button.choice:hover {
   background: var(--danger);
 }
 
-/* One tile per person in the voice room. */
 .people {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-content: start;
-  gap: 8px;
-  flex: 1;
-  min-height: 0;
-  padding: 8px 12px 12px;
-  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px 40px;
 }
 
-.people > .person,
 .peer {
-  border-radius: var(--radius);
-  background: var(--bg-2);
-}
-
-.peer:has(.stats) {
-  grid-column: 1 / -1;
+  position: relative;
 }
 
 .person {
@@ -486,75 +480,91 @@ button.choice:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  min-width: 0;
-  padding: 22px 8px 14px;
+  gap: 18px;
+  width: 168px;
+  padding: 16px 8px;
+  border-radius: var(--radius-l);
+  background: none;
+  font-weight: 400;
   text-align: center;
+}
+
+button.person:hover,
+button.person[aria-expanded='true'] {
+  background: var(--bg-2);
 }
 
 .avatar {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 32%;
-  color: var(--accent-ink);
-  font-weight: 700;
-  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #26262b;
+  font-weight: 800;
+  font-size: 15px;
 }
 
 .person .avatar {
-  width: 68px;
-  height: 68px;
-  font-size: 28px;
+  width: 128px;
+  height: 128px;
+  font-size: 54px;
 }
 
 /* A plain ring shows who is talking. It appears at once: an animated one would keep the window drawing. */
 .avatar.speaking {
   box-shadow:
-    0 0 0 3px var(--bg-2),
-    0 0 0 6px var(--accent);
+    0 0 0 6px var(--bg-0),
+    0 0 0 11px var(--ok);
 }
 
 .hue-0 {
-  background: #ff8a65;
+  background: #ffb88c;
 }
 .hue-1 {
-  background: #f2b84b;
+  background: #f3d08a;
 }
 .hue-2 {
-  background: #6fd39a;
+  background: #b3dba0;
 }
 .hue-3 {
-  background: #62b8f5;
+  background: #a3cfe8;
 }
 .hue-4 {
-  background: #b7a2f7;
+  background: #cdbcf3;
 }
 .hue-5 {
-  background: #f590c2;
+  background: #f3aec6;
 }
 
 .who {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
   min-width: 0;
 }
 
-.person .who {
-  flex: none;
-  align-items: center;
-  width: 100%;
+.who strong {
+  font-size: 20px;
+  font-weight: 800;
 }
 
-.who strong {
-  font-weight: 650;
+/* The delay to that person: the reason this app exists, so it is shown plainly. */
+.who .note {
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .who strong,
-.who span {
+.who > span {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -565,51 +575,52 @@ button.choice:hover {
   font-weight: 400;
 }
 
+/* Microphone or sound switched off: a badge on the corner of the face. */
 .flag {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 112px;
+  right: 14px;
   display: grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border: 4px solid var(--bg-0);
+  border-radius: 50%;
   background: var(--danger);
   color: #fff;
 }
 
 .flag + .flag {
-  right: 38px;
+  right: auto;
+  left: 14px;
 }
 
-/* The volume of someone shows when pointing at them; its place is kept so nothing moves. */
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 260px;
+  margin-left: -130px;
+  padding: 14px;
+  border-radius: var(--radius-l);
+  background: var(--bg-3);
+}
+
 .volume {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 6px;
-  padding: 0 12px 12px;
-  color: var(--muted);
-  opacity: 0;
-}
-
-.peer:hover .volume,
-.peer:focus-within .volume {
-  opacity: 1;
-}
-
-.volume input {
-  flex: 1;
-  min-width: 0;
 }
 
 .stats {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 4px 12px;
-  margin: 0 10px 10px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--bg-0);
+  margin: 0;
   font-size: 12px;
 }
 
@@ -623,109 +634,95 @@ button.choice:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.empty {
-  grid-column: 1 / -1;
+.invite {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
-  padding: 8px 4px;
   text-align: center;
-}
-
-.empty p {
-  margin: 0;
 }
 
 .access-code {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 16px 12px;
-  border-radius: var(--radius);
-  background: var(--bg-3);
+  gap: 10px;
 }
 
 .access-code code,
 input.code-input {
   font-family: 'Cascadia Mono', Consolas, monospace;
-  font-size: 24px;
   font-weight: 600;
-  letter-spacing: 0.25em;
+  letter-spacing: 0.2em;
   user-select: text;
 }
 
 .access-code code {
-  margin-right: -0.25em;
-  color: var(--accent);
+  padding: 4px 6px 4px 12px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 18px;
+}
+
+.settings-body .access-code {
+  justify-content: space-between;
 }
 
 input.code-input {
   padding-block: 14px;
+  font-size: 24px;
   text-align: center;
   text-transform: uppercase;
 }
 
-/* The dock: who you are, and the controls you reach for during a call. */
-.userbar {
-  grid-area: user;
+/* The call controls, always under the stage. */
+.dock {
+  grid-column: 1;
+  grid-row: 3;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 6px;
-  padding: 10px 12px;
-  border-radius: var(--radius-l);
+  gap: 10px;
+  padding: 12px 16px 24px;
 }
 
-.userbar .who {
-  margin: 0 4px 0 6px;
-}
-
-.userbar .icon-btn {
-  width: 40px;
-  height: 40px;
+.dock-btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  padding: 0;
+  border-radius: 50%;
   background: var(--bg-3);
+}
+
+.dock-btn.small-btn {
+  width: 46px;
+  height: 46px;
+  background: var(--bg-2);
+  color: var(--muted);
+}
+
+.dock-btn:hover {
+  background: var(--bg-4);
   color: var(--text);
 }
 
-.userbar .icon-btn:hover {
-  background: var(--bg-4);
-}
-
-.userbar .icon-btn.on {
+.dock-btn.on {
   background: var(--danger);
   color: #fff;
 }
 
-.tabs {
-  grid-area: tabs;
-  justify-self: start;
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: var(--radius-l);
+.dock-btn.active {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
-.tab {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: none;
-  color: var(--muted);
-}
-
-.tab:hover {
-  background: none;
-  color: var(--text);
-}
-
-.tab.active {
-  background: var(--bg-3);
-  color: var(--text);
-}
-
-.tab.narrow-only {
-  display: none;
+.dock-btn .badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
 }
 
 .badge {
@@ -740,76 +737,58 @@ input.code-input {
   text-align: center;
 }
 
-.notices {
-  grid-area: notices;
+.divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 6px;
+  background: var(--line);
+}
+
+/* Chat or notes, beside the call. */
+.side-panel {
+  grid-column: 2;
+  grid-row: 2 / 4;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.notices:empty {
-  display: none;
-}
-
-.notice,
-.error {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius);
-}
-
-.notice {
-  background: var(--bg-3);
-}
-
-.error {
-  background: var(--danger);
-  color: #fff;
-}
-
-.main {
-  grid-area: main;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
   min-height: 0;
+  background: var(--bg-1);
 }
 
-/* Narrow window: one thing at a time, the voice room becomes a tab. */
-@media (max-width: 719.9px) {
-  .app {
+.panel-head {
+  padding: 14px 16px 6px;
+}
+
+/* Narrow window: the panel takes the place of the stage; the controls stay. */
+@media (max-width: 759.9px) {
+  .app.with-panel {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      'tabs'
-      'notices'
-      'main'
-      'user';
   }
 
-  .side {
-    grid-area: main;
-  }
-
-  .tabs {
-    justify-self: stretch;
-  }
-
-  .tab {
-    flex: 1;
-    justify-content: center;
-    padding-inline: 8px;
-  }
-
-  .tab.narrow-only {
-    display: flex;
-  }
-
-  .app.view-voice .main,
-  .app:not(.view-voice) .side {
+  .app.with-panel .stage {
     display: none;
+  }
+
+  .side-panel {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .dock {
+    padding-bottom: 14px;
+  }
+
+  .person {
+    width: 132px;
+  }
+
+  .person .avatar {
+    width: 96px;
+    height: 96px;
+    font-size: 40px;
+  }
+
+  .flag {
+    top: 84px;
   }
 }
 
@@ -995,7 +974,9 @@ input.code-input {
 
 .chat > .notice,
 .chat > .upload {
-  margin: 0 16px 8px;
+  width: auto;
+  margin: 0 14px 8px;
+  border-radius: var(--radius);
 }
 
 .messages {
@@ -1003,9 +984,19 @@ input.code-input {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 8px 0 12px;
+  padding: 8px 14px 12px;
   overflow-y: auto;
   overflow-anchor: none;
+}
+
+/* The conversation stays a readable column however wide the window is. */
+.messages > *,
+.composer > *,
+.chat > .notice,
+.chat > .upload {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
 }
 
 .messages > :first-child {
@@ -1013,7 +1004,7 @@ input.code-input {
 }
 
 .messages > button {
-  align-self: center;
+  width: auto;
 }
 
 .empty-state {
@@ -1043,16 +1034,16 @@ input.code-input {
   width: 56px;
   height: 56px;
   margin-bottom: 6px;
-  border-radius: 32%;
+  border-radius: 50%;
   background: var(--bg-3);
   color: var(--text);
 }
 
 .day {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 16px 20px 4px;
+  justify-content: center;
+  margin-top: 18px;
+  margin-bottom: 6px;
 }
 
 .day span {
@@ -1070,78 +1061,97 @@ input.code-input {
 }
 
 .msg {
-  position: relative;
   display: flex;
-  gap: 12px;
-  margin-top: 14px;
-  padding: 3px 20px;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .msg.grouped {
-  margin-top: 0;
+  margin-top: 3px;
+}
+
+/* Your own messages sit on the right, in the accent colour. */
+.msg.mine {
+  flex-direction: row-reverse;
+}
+
+.msg.mine .msg-content {
+  align-items: flex-end;
+}
+
+.msg.mine .msg-content p {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.msg.mine .msg-content a {
+  color: inherit;
 }
 
 .msg:hover {
-  background: rgb(255 255 255 / 2.5%);
+  background: none;
 }
 
 .msg-gutter {
   flex-shrink: 0;
-  width: 40px;
+  width: 36px;
 }
 
 .msg-head {
   display: flex;
   align-items: baseline;
   gap: 8px;
+  padding: 0 4px;
 }
 
 .msg-head strong {
-  font-weight: 650;
+  font-weight: 800;
 }
 
 .name-0 {
-  color: #ff8a65;
+  color: #ffb88c;
 }
 .name-1 {
-  color: #f2b84b;
+  color: #f3d08a;
 }
 .name-2 {
-  color: #6fd39a;
+  color: #b3dba0;
 }
 .name-3 {
-  color: #62b8f5;
+  color: #a3cfe8;
 }
 .name-4 {
-  color: #b7a2f7;
+  color: #cdbcf3;
 }
 .name-5 {
-  color: #f590c2;
+  color: #f3aec6;
 }
 
 .msg-content {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  flex: 1;
+  gap: 3px;
   min-width: 0;
+  max-width: 84%;
   user-select: text;
 }
 
 .msg-content p {
   margin: 0;
+  padding: 8px 13px;
+  border-radius: 18px;
+  background: var(--bg-2);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: 14.5px;
-  line-height: 1.5;
+  line-height: 1.45;
 }
 
 .msg-action {
-  position: absolute;
-  top: -10px;
-  right: 14px;
-  background: var(--bg-3);
+  align-self: center;
+  background: none;
   opacity: 0;
 }
 
@@ -1224,7 +1234,7 @@ button.file strong {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 16px 16px;
+  padding: 0 14px 14px;
 }
 
 .composer-box {
@@ -1294,18 +1304,19 @@ button.file strong {
   gap: 14px;
   flex: 1;
   min-height: 0;
-  padding: 16px;
+  padding: 14px;
   overflow-y: auto;
 }
 
 .notes-head {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .note-grid {
-  columns: 220px;
-  column-gap: 12px;
+  columns: 150px;
+  column-gap: 10px;
 }
 
 button.note {
@@ -1313,8 +1324,8 @@ button.note {
   flex-direction: column;
   gap: 6px;
   width: 100%;
-  margin-bottom: 12px;
-  padding: 16px;
+  margin-bottom: 10px;
+  padding: 14px;
   border-radius: var(--radius);
   text-align: left;
   font-weight: 400;
@@ -1357,23 +1368,23 @@ button.color-0:hover {
 }
 .color-1,
 button.color-1:hover {
-  background: #5a3226;
+  background: color-mix(in srgb, #ffb88c 24%, var(--bg-2));
 }
 .color-2,
 button.color-2:hover {
-  background: #574318;
+  background: color-mix(in srgb, #f3d08a 24%, var(--bg-2));
 }
 .color-3,
 button.color-3:hover {
-  background: #254a36;
+  background: color-mix(in srgb, #b3dba0 24%, var(--bg-2));
 }
 .color-4,
 button.color-4:hover {
-  background: #1f4259;
+  background: color-mix(in srgb, #a3cfe8 24%, var(--bg-2));
 }
 .color-5,
 button.color-5:hover {
-  background: #3d3466;
+  background: color-mix(in srgb, #cdbcf3 24%, var(--bg-2));
 }
 
 .note-editor {

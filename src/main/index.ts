@@ -182,10 +182,10 @@ function createWindow(): void {
     icon: makeIcon(64),
     skipTaskbar: Boolean(e2e?.ui),
     focusable: !e2e?.ui,
-    backgroundColor: '#0e0e0d',
+    backgroundColor: '#18181b',
     // On Windows the page draws the title bar, under the system's own window buttons.
     ...(process.platform === 'win32'
-      ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#0e0e0d', symbolColor: '#92928a', height: 34 } }
+      ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#18181b', symbolColor: '#9b9ba6', height: 36 } }
       : {}),
     autoHideMenuBar: true,
     webPreferences: {

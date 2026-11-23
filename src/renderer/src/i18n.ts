@@ -91,10 +91,10 @@ const en = {
   pttPress: 'Press a key or a side mouse button…',
   pttUnavailable: 'Push to talk is not available on this system.',
   tabVoice: 'Voice',
-  tabChat: 'Chat',
+  tabChat: 'Shared',
   tabNotes: 'Notes',
-  chatPlaceholder: 'Write a message',
-  chatEmpty: 'Text, photos, videos and files are kept on the host computer.',
+  chatPlaceholder: 'Drop a link, a photo, a note…',
+  chatEmpty: 'Send each other links, photos, videos and files. Everything stays at home, on the host computer.',
   chatOffline: 'Not connected to the host: messages cannot be sent right now.',
   send: 'Send',
   attach: 'Attach files',
@@ -131,8 +131,9 @@ const en = {
   devices: 'Devices',
   processing: 'Sound processing',
   micActivation: 'When the microphone is sent',
-  chatEmptyTitle: 'Nothing here yet',
-  notesEmptyTitle: 'No note yet'
+  chatEmptyTitle: 'Your shared corner',
+  notesEmptyTitle: 'No note yet',
+  delayShort: '{ms} ms delay'
 }
 
 const fr: typeof en = {
@@ -228,10 +229,10 @@ const fr: typeof en = {
   pttPress: 'Appuie sur une touche ou un bouton latéral de la souris…',
   pttUnavailable: "L'appui pour parler n'est pas disponible sur ce système.",
   tabVoice: 'Vocal',
-  tabChat: 'Discussion',
+  tabChat: 'Partage',
   tabNotes: 'Notes',
-  chatPlaceholder: 'Écrire un message',
-  chatEmpty: 'Textes, photos, vidéos et fichiers sont gardés sur le PC hôte.',
+  chatPlaceholder: 'Un lien, une photo, un mot…',
+  chatEmpty: 'Envoyez-vous des liens, des photos, des vidéos, des fichiers. Tout reste chez vous, sur le PC hôte.',
   chatOffline: "Pas de connexion à l'hôte : impossible d'envoyer des messages pour le moment.",
   send: 'Envoyer',
   attach: 'Joindre des fichiers',
@@ -268,8 +269,9 @@ const fr: typeof en = {
   devices: 'Périphériques',
   processing: 'Traitement du son',
   micActivation: 'Quand le micro est envoyé',
-  chatEmptyTitle: 'Rien ici pour le moment',
-  notesEmptyTitle: 'Pas encore de note'
+  chatEmptyTitle: 'Votre coin à deux',
+  notesEmptyTitle: 'Pas encore de note',
+  delayShort: '{ms} ms de délai'
 }
 
 export type MessageKey = keyof typeof en

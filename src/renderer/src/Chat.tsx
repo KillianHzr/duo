@@ -182,12 +182,12 @@ export function Chat({ space, self }: { space: Space; self: string }) {
                   <span>{dayLabel(message.at)}</span>
                 </div>
               )}
-              <div className={grouped ? 'msg grouped' : 'msg'} title={timeLabel(message.at)}>
-                <div className="msg-gutter">{!grouped && <Avatar name={message.from} />}</div>
+              <div className={`msg${grouped ? ' grouped' : ''}${mine ? ' mine' : ''}`} title={timeLabel(message.at)}>
+                {!mine && <div className="msg-gutter">{!grouped && <Avatar name={message.from} />}</div>}
                 <div className="msg-content">
                   {!grouped && (
                     <div className="msg-head">
-                      <strong className={`name-${hue(message.from)}`}>{message.from}</strong>
+                      {!mine && <strong className={`name-${hue(message.from)}`}>{message.from}</strong>}
                       <span className="muted small">{timeLabel(message.at)}</span>
                     </div>
                   )}
