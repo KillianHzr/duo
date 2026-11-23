@@ -94,7 +94,7 @@ const en = {
   tabChat: 'Chat',
   tabNotes: 'Notes',
   chatPlaceholder: 'Write a message',
-  chatEmpty: 'No message yet. Text, photos, videos and files are kept on the host computer.',
+  chatEmpty: 'Text, photos, videos and files are kept on the host computer.',
   chatOffline: 'Not connected to the host: messages cannot be sent right now.',
   send: 'Send',
   attach: 'Attach files',
@@ -106,7 +106,7 @@ const en = {
   uploadFailed: 'Could not send',
   sizeUnits: 'B,kB,MB,GB',
   newNote: 'New note',
-  notesEmpty: 'No note yet. Notes are shared with everyone in the call.',
+  notesEmpty: 'Notes are shared with everyone in the call.',
   noteTitle: 'Title',
   noteText: 'Note',
   noteColor: 'Colour',
@@ -130,7 +130,9 @@ const en = {
   settingsHost: 'Hosting',
   devices: 'Devices',
   processing: 'Sound processing',
-  micActivation: 'When the microphone is sent'
+  micActivation: 'When the microphone is sent',
+  chatEmptyTitle: 'Nothing here yet',
+  notesEmptyTitle: 'No note yet'
 }
 
 const fr: typeof en = {
@@ -229,7 +231,7 @@ const fr: typeof en = {
   tabChat: 'Discussion',
   tabNotes: 'Notes',
   chatPlaceholder: 'Écrire un message',
-  chatEmpty: "Aucun message pour l'instant. Textes, photos, vidéos et fichiers sont gardés sur le PC hôte.",
+  chatEmpty: 'Textes, photos, vidéos et fichiers sont gardés sur le PC hôte.',
   chatOffline: "Pas de connexion à l'hôte : impossible d'envoyer des messages pour le moment.",
   send: 'Envoyer',
   attach: 'Joindre des fichiers',
@@ -241,7 +243,7 @@ const fr: typeof en = {
   uploadFailed: "Échec de l'envoi",
   sizeUnits: 'o,Ko,Mo,Go',
   newNote: 'Nouvelle note',
-  notesEmpty: "Aucune note pour l'instant. Les notes sont partagées avec toutes les personnes de l'appel.",
+  notesEmpty: "Les notes sont partagées avec toutes les personnes de l'appel.",
   noteTitle: 'Titre',
   noteText: 'Note',
   noteColor: 'Couleur',
@@ -265,7 +267,9 @@ const fr: typeof en = {
   settingsHost: 'Hébergement',
   devices: 'Périphériques',
   processing: 'Traitement du son',
-  micActivation: 'Quand le micro est envoyé'
+  micActivation: 'Quand le micro est envoyé',
+  chatEmptyTitle: 'Rien ici pour le moment',
+  notesEmptyTitle: 'Pas encore de note'
 }
 
 export type MessageKey = keyof typeof en

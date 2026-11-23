@@ -1,21 +1,26 @@
 :root {
-  --bg-0: #0e0f13;
-  --bg-1: #15161c;
-  --bg-2: #1b1d25;
-  --bg-3: #252832;
-  --bg-4: #303442;
+  --bg-0: #0a0b0f;
+  --bg-1: #13141a;
+  --bg-2: #191b23;
+  --bg-3: #21242e;
+  --bg-4: #2d313f;
   --line: rgb(255 255 255 / 7%);
-  --text: #eceef4;
-  --muted: #959aad;
-  --accent: #7c6cff;
-  --accent-text: #a79dff;
-  --ok: #3dd68c;
+  --text: #f1f2f7;
+  --muted: #8e93a8;
+  --accent: #8b7bff;
+  --accent-2: #d06bff;
+  --accent-text: #b0a6ff;
+  --gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --ok: #3ddc97;
   --warn: #f5b83d;
-  --danger: #f0525a;
-  --radius: 10px;
+  --danger: #f2555e;
+  --radius: 12px;
+  --radius-l: 18px;
   color-scheme: dark;
-  font-family: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
+  font-feature-settings: 'cv11', 'ss03';
   font-size: 14px;
+  -webkit-font-smoothing: antialiased;
 }
 
 * {
@@ -30,7 +35,11 @@ body,
 }
 
 body {
-  background: var(--bg-2);
+  /* A fixed glow behind the panels: drawn once, it costs nothing afterwards. */
+  background:
+    radial-gradient(900px 520px at 0% 0%, rgb(139 123 255 / 13%), transparent 62%),
+    radial-gradient(700px 480px at 100% 100%, rgb(208 107 255 / 7%), transparent 60%),
+    var(--bg-0);
   color: var(--text);
   user-select: none;
   overflow: hidden;
@@ -43,8 +52,9 @@ body {
 
 h1 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 650;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 h2 {
@@ -103,9 +113,8 @@ a {
   gap: 8px;
   flex-shrink: 0;
   height: env(titlebar-area-height, 0px);
-  padding-left: 12px;
+  padding-left: 14px;
   overflow: hidden;
-  background: var(--bg-0);
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
@@ -114,8 +123,10 @@ a {
 
 .logo,
 .brand {
-  border-radius: 30%;
-  background: linear-gradient(135deg, var(--accent), #c46cff);
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 10px;
+  box-shadow: 0 12px 40px rgb(139 123 255 / 45%);
 }
 
 .logo {
@@ -132,14 +143,18 @@ a {
 /* ----- Controls ----- */
 
 button {
-  padding: 8px 14px;
+  padding: 9px 16px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg-3);
   color: var(--text);
   font: inherit;
-  font-weight: 500;
+  font-weight: 550;
   cursor: pointer;
+  transition:
+    background-color 0.12s,
+    color 0.12s,
+    border-color 0.12s;
 }
 
 button:hover {
@@ -155,12 +170,13 @@ textarea:focus-visible {
 }
 
 button.primary {
-  background: var(--accent);
+  background: var(--gradient);
   color: #fff;
+  box-shadow: 0 6px 20px rgb(139 123 255 / 30%);
 }
 
 button.primary:hover {
-  background: #8d7fff;
+  filter: brightness(1.1);
 }
 
 button.danger,
@@ -199,9 +215,10 @@ button.with-icon {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   padding: 0;
+  border-radius: 50%;
   background: none;
   color: var(--muted);
 }
@@ -219,9 +236,9 @@ button.with-icon {
 input:not([type='range']):not([type='checkbox']),
 select,
 textarea {
-  padding: 9px 11px;
-  border: 1px solid transparent;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   background: var(--bg-0);
   color: var(--text);
   font: inherit;
@@ -352,9 +369,14 @@ button.choice {
   gap: 4px;
   padding: 16px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 16px;
   background: var(--bg-1);
   text-align: left;
+  font-weight: 400;
+}
+
+button.choice strong {
+  font-size: 15px;
 }
 
 button.choice:hover {
@@ -362,19 +384,35 @@ button.choice:hover {
   background: var(--bg-3);
 }
 
-/* ----- Main layout: voice room on the left, the rest beside it ----- */
+/* ----- Main layout: floating panels, the voice room on the left ----- */
 
 .app {
   display: grid;
-  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-columns: 300px minmax(0, 1fr);
   grid-template-rows: auto auto minmax(0, 1fr) auto;
   grid-template-areas:
     'side tabs'
     'side notices'
     'side main'
     'user main';
+  gap: 8px;
   flex: 1;
   min-height: 0;
+  padding: 8px;
+}
+
+.side,
+.main,
+.userbar,
+.tabs {
+  border: 1px solid var(--line);
+  background: var(--bg-1);
+}
+
+.side,
+.main {
+  border-radius: var(--radius-l);
+  overflow: hidden;
 }
 
 .side {
@@ -382,7 +420,7 @@ button.choice:hover {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: var(--bg-1);
+  background: linear-gradient(180deg, rgb(139 123 255 / 10%), transparent 240px), var(--bg-1);
 }
 
 .side-head {
@@ -390,37 +428,39 @@ button.choice:hover {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  height: 48px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--line);
+  padding: 16px 16px 8px;
 }
 
 .label {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
 }
 
 .status {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-3);
   font-size: 12px;
-  color: var(--muted);
+  font-weight: 550;
   white-space: nowrap;
 }
 
 .status::before {
   content: '';
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  margin-right: 6px;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
   border-radius: 50%;
   background: var(--muted);
 }
 
 .status.connected::before {
   background: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
 }
 
 .status.connecting::before,
@@ -432,70 +472,83 @@ button.choice:hover {
   background: var(--danger);
 }
 
+/* One tile per person in the voice room. */
 .people {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 8px;
   flex: 1;
   min-height: 0;
-  padding: 8px;
+  padding: 8px 12px 12px;
   overflow-y: auto;
 }
 
-.person {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 8px;
-}
-
+.people > .person,
 .peer {
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg-2);
 }
 
-.peer:hover,
-.people > .person:hover {
-  background: var(--bg-3);
+.peer:has(.stats) {
+  grid-column: 1 / -1;
+}
+
+.person {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 22px 8px 14px;
+  text-align: center;
 }
 
 .avatar {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   color: #fff;
-  font-weight: 650;
-  font-size: 15px;
-  /* The ring shows who is talking. It appears at once: an animated one would keep the window drawing. */
-  box-shadow: 0 0 0 2px transparent;
+  font-weight: 700;
+  font-size: 16px;
 }
 
+.person .avatar {
+  width: 68px;
+  height: 68px;
+  font-size: 28px;
+}
+
+/* The halo shows who is talking. It appears at once: an animated one would keep the window drawing. */
 .avatar.speaking {
   box-shadow:
-    0 0 0 2px var(--bg-1),
-    0 0 0 4px var(--ok);
+    0 0 0 3px var(--bg-2),
+    0 0 0 6px var(--ok),
+    0 0 28px 6px rgb(61 220 151 / 40%);
 }
 
 .hue-0 {
-  background: #7c6cff;
+  background: linear-gradient(135deg, #9a8bff, #5b47e6);
 }
 .hue-1 {
-  background: #e0668a;
+  background: linear-gradient(135deg, #ff8fb0, #d9457a);
 }
 .hue-2 {
-  background: #d98634;
+  background: linear-gradient(135deg, #ffb96b, #e0702c);
 }
 .hue-3 {
-  background: #2fa888;
+  background: linear-gradient(135deg, #5fe0b8, #1f9c7c);
 }
 .hue-4 {
-  background: #3b8fd9;
+  background: linear-gradient(135deg, #73c0ff, #2f78d6);
 }
 .hue-5 {
-  background: #b25fd6;
+  background: linear-gradient(135deg, #dc93ff, #9a45d6);
 }
 
 .who {
@@ -505,12 +558,19 @@ button.choice:hover {
   min-width: 0;
 }
 
+.person .who {
+  flex: none;
+  align-items: center;
+  width: 100%;
+}
+
 .who strong {
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .who strong,
 .who span {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -521,22 +581,35 @@ button.choice:hover {
 }
 
 .flag {
+  position: absolute;
+  top: 8px;
+  right: 8px;
   display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--danger) 20%, transparent);
   color: var(--danger);
 }
 
-/* The volume of someone shows when pointing at them. */
-.peer:hover .volume,
-.peer:focus-within .volume {
-  display: flex;
+.flag + .flag {
+  right: 38px;
 }
 
+/* The volume of someone shows when pointing at them; its place is kept so nothing moves. */
 .volume {
-  display: none;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 10px 8px 54px;
+  gap: 6px;
+  padding: 0 12px 12px;
   color: var(--muted);
+  opacity: 0;
+}
+
+.peer:hover .volume,
+.peer:focus-within .volume {
+  opacity: 1;
 }
 
 .volume input {
@@ -548,9 +621,9 @@ button.choice:hover {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 4px 12px;
-  margin: 0 8px 8px;
-  padding: 10px;
-  border-radius: 8px;
+  margin: 0 10px 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
   background: var(--bg-0);
   font-size: 12px;
 }
@@ -566,10 +639,12 @@ button.choice:hover {
 }
 
 .empty {
+  grid-column: 1 / -1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px 8px;
+  gap: 12px;
+  padding: 8px 4px;
+  text-align: center;
 }
 
 .empty p {
@@ -580,16 +655,17 @@ button.choice:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px;
-  border: 1px dashed var(--bg-4);
-  border-radius: var(--radius);
+  gap: 6px;
+  padding: 16px 12px;
+  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
 .access-code code,
 input.code-input {
   font-family: 'Cascadia Mono', Consolas, monospace;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 600;
   letter-spacing: 0.25em;
   user-select: text;
@@ -601,44 +677,66 @@ input.code-input {
 }
 
 input.code-input {
+  padding-block: 14px;
   text-align: center;
   text-transform: uppercase;
 }
 
+/* The dock: who you are, and the controls you reach for during a call. */
 .userbar {
   grid-area: user;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 10px;
-  background: var(--bg-0);
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--radius-l);
 }
 
 .userbar .who {
   margin: 0 4px 0 6px;
 }
 
+.userbar .icon-btn {
+  width: 40px;
+  height: 40px;
+  background: var(--bg-3);
+  color: var(--text);
+}
+
+.userbar .icon-btn:hover {
+  background: var(--bg-4);
+}
+
+.userbar .icon-btn.on {
+  background: var(--danger);
+  color: #fff;
+}
+
 .tabs {
   grid-area: tabs;
+  justify-self: start;
   display: flex;
-  align-items: center;
   gap: 4px;
-  height: 48px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--line);
+  padding: 4px;
+  border-radius: 14px;
 }
 
 .tab {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 12px;
+  gap: 8px;
+  padding: 8px 16px;
   background: none;
   color: var(--muted);
 }
 
+.tab:hover {
+  background: none;
+  color: var(--text);
+}
+
 .tab.active {
-  background: var(--bg-3);
+  background: var(--bg-4);
   color: var(--text);
 }
 
@@ -663,11 +761,10 @@ input.code-input {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 16px;
 }
 
-.notices:not(:empty) {
-  padding-top: 12px;
+.notices:empty {
+  display: none;
 }
 
 .notice,
@@ -676,17 +773,17 @@ input.code-input {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
 }
 
 .notice {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-1));
 }
 
 .error {
-  background: color-mix(in srgb, var(--danger) 16%, transparent);
-  color: #ffb9bd;
+  background: color-mix(in srgb, var(--danger) 18%, var(--bg-1));
+  color: #ffc2c6;
 }
 
 .main {
@@ -710,26 +807,16 @@ input.code-input {
 
   .side {
     grid-area: main;
-    background: none;
-  }
-
-  .side-head {
-    border: 0;
-  }
-
-  .avatar.speaking {
-    box-shadow:
-      0 0 0 2px var(--bg-2),
-      0 0 0 4px var(--ok);
   }
 
   .tabs {
-    padding: 0 8px;
+    justify-self: stretch;
   }
 
   .tab {
     flex: 1;
     justify-content: center;
+    padding-inline: 8px;
   }
 
   .tab.narrow-only {
@@ -763,9 +850,9 @@ input.code-input {
   max-height: 100%;
   padding: 18px;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-l);
   background: var(--bg-2);
-  box-shadow: 0 16px 48px rgb(0 0 0 / 50%);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 60%);
 }
 
 .settings {
@@ -948,18 +1035,49 @@ input.code-input {
   align-self: center;
 }
 
-.empty-chat {
-  max-width: 300px;
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 320px;
   margin: auto;
   padding: 16px;
   text-align: center;
+}
+
+.empty-state strong {
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.empty-state p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.empty-icon {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 6px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent-text);
 }
 
 .day {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 14px 16px 2px;
+  margin: 16px 20px 4px;
+}
+
+.day span {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bg-3);
 }
 
 .day::before,
@@ -974,8 +1092,8 @@ input.code-input {
   position: relative;
   display: flex;
   gap: 12px;
-  margin-top: 12px;
-  padding: 3px 16px;
+  margin-top: 14px;
+  padding: 3px 20px;
 }
 
 .msg.grouped {
@@ -983,12 +1101,12 @@ input.code-input {
 }
 
 .msg:hover {
-  background: rgb(0 0 0 / 14%);
+  background: rgb(255 255 255 / 2.5%);
 }
 
 .msg-gutter {
   flex-shrink: 0;
-  width: 36px;
+  width: 40px;
 }
 
 .msg-head {
@@ -998,7 +1116,26 @@ input.code-input {
 }
 
 .msg-head strong {
-  font-weight: 600;
+  font-weight: 650;
+}
+
+.name-0 {
+  color: #b0a6ff;
+}
+.name-1 {
+  color: #ff9db8;
+}
+.name-2 {
+  color: #ffbf7a;
+}
+.name-3 {
+  color: #6fe0c0;
+}
+.name-4 {
+  color: #7fc1ff;
+}
+.name-5 {
+  color: #dc9bff;
 }
 
 .msg-content {
@@ -1015,7 +1152,8 @@ input.code-input {
   margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  line-height: 1.45;
+  font-size: 14.5px;
+  line-height: 1.5;
 }
 
 .msg-action {
@@ -1113,10 +1251,11 @@ button.file strong {
 .composer-box {
   display: flex;
   align-items: flex-end;
-  gap: 4px;
-  padding: 5px;
-  border-radius: 12px;
-  background: var(--bg-3);
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--bg-2);
 }
 
 .composer-box:focus-within {
@@ -1127,14 +1266,15 @@ button.file strong {
   flex: 1;
   min-width: 0;
   max-height: 120px;
-  padding: 7px 4px;
+  padding: 8px 4px;
   border: 0;
   background: none;
+  font-size: 14.5px;
   outline: none;
 }
 
 .icon-btn.send:not(:disabled) {
-  background: var(--accent);
+  background: var(--gradient);
   color: #fff;
 }
 
@@ -1200,9 +1340,9 @@ button.note {
   gap: 6px;
   width: 100%;
   margin-bottom: 12px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 16px;
   text-align: left;
   font-weight: 400;
   break-inside: avoid;
@@ -1240,27 +1380,27 @@ button.note:hover {
 
 .color-0,
 button.color-0:hover {
-  background: var(--bg-3);
+  background: var(--bg-2);
 }
 .color-1,
 button.color-1:hover {
-  background: #5a2a33;
+  background: color-mix(in srgb, #f2557a 20%, var(--bg-2));
 }
 .color-2,
 button.color-2:hover {
-  background: #5c4518;
+  background: color-mix(in srgb, #f0a030 20%, var(--bg-2));
 }
 .color-3,
 button.color-3:hover {
-  background: #26503a;
+  background: color-mix(in srgb, #3ddc97 20%, var(--bg-2));
 }
 .color-4,
 button.color-4:hover {
-  background: #23495c;
+  background: color-mix(in srgb, #3fb0f0 20%, var(--bg-2));
 }
 .color-5,
 button.color-5:hover {
-  background: #43306b;
+  background: color-mix(in srgb, #a070ff 20%, var(--bg-2));
 }
 
 .note-editor {

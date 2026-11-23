@@ -75,7 +75,7 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
 const HUES = 6
 
 /** Everyone keeps the same colour everywhere, picked from their name. */
-function hue(name: string): number {
+export function hue(name: string): number {
   let sum = 0
   for (const char of name) sum = (sum * 31 + char.codePointAt(0)!) >>> 0
   return sum % HUES

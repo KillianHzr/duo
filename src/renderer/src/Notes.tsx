@@ -22,7 +22,15 @@ export function Notes({ space, self }: { space: Space; self: string }) {
           {t('newNote')}
         </button>
       </div>
-      {notes.length === 0 && <p className="muted small empty-chat">{t('notesEmpty')}</p>}
+      {notes.length === 0 && (
+        <div className="empty-state">
+          <span className="empty-icon">
+            <Icon name="notes" size={30} />
+          </span>
+          <strong>{t('notesEmptyTitle')}</strong>
+          <p className="muted">{t('notesEmpty')}</p>
+        </div>
+      )}
       <div className="note-grid">
         {notes.map((note) => (
           <button key={note.id} className={`note color-${note.color}`} onClick={() => setEditing(note)}>

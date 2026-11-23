@@ -13,7 +13,7 @@ import {
 } from 'react'
 import { MAX_FILES_PER_MESSAGE, MAX_TEXT_LENGTH, type ChatMessage, type FileRef } from '../../shared/protocol'
 import { t } from './i18n'
-import { Avatar, Icon } from './icons'
+import { Avatar, Icon, hue } from './icons'
 import { isAudio, isImage, isVideo, type Space } from './space'
 
 /** Messages from the same person less than this apart are shown as one block. */
@@ -161,7 +161,15 @@ export function Chat({ space, self }: { space: Space; self: string }) {
             {t('loadOlder')}
           </button>
         )}
-        {chat.messages.length === 0 && <p className="muted small empty-chat">{t('chatEmpty')}</p>}
+        {chat.messages.length === 0 && (
+          <div className="empty-state">
+            <span className="empty-icon">
+              <Icon name="chat" size={30} />
+            </span>
+            <strong>{t('chatEmptyTitle')}</strong>
+            <p className="muted">{t('chatEmpty')}</p>
+          </div>
+        )}
         {chat.messages.map((message, i) => {
           const before: ChatMessage | undefined = chat.messages[i - 1]
           const newDay = !before || dayKey(before.at) !== dayKey(message.at)
@@ -179,7 +187,7 @@ export function Chat({ space, self }: { space: Space; self: string }) {
                 <div className="msg-content">
                   {!grouped && (
                     <div className="msg-head">
-                      <strong>{message.from}</strong>
+                      <strong className={`name-${hue(message.from)}`}>{message.from}</strong>
                       <span className="muted small">{timeLabel(message.at)}</span>
                     </div>
                   )}
