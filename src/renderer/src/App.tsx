@@ -97,8 +97,9 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
     localStorage.setItem('duo.panel', which)
     setPanel(which)
   }
-  /** The face picked on this computer; the others learn it when we connect. */
-  const [face, setFace] = useState(chosenFace)
+  /** The face picked on this computer, if any; otherwise the host draws one at random for each call. */
+  const [picked, setPicked] = useState(chosenFace)
+  const face = picked ?? voice.selfAvatar
   /** The person whose volume and measurements are shown, if any. */
   const [openPeer, setOpenPeer] = useState<string | null>(null)
   const [app, setApp] = useState<AppState | null>(null)
@@ -367,9 +368,11 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
           setShowStats={setShowStats}
           name={name}
           face={face}
+          randomFace={picked === undefined}
           onPickFace={(pick) => {
-            localStorage.setItem('duo.avatar', String(pick))
-            setFace(pick)
+            if (pick === null) localStorage.removeItem('duo.avatar')
+            else localStorage.setItem('duo.avatar', String(pick))
+            setPicked(pick ?? undefined)
             // The others learn a new face when we connect, so connect again.
             setAttempt((n) => n + 1)
           }}
@@ -459,7 +462,8 @@ function Settings(props: {
   setShowStats: (value: boolean) => void
   name: string
   face: number | undefined
-  onPickFace: (pick: number) => void
+  randomFace: boolean
+  onPickFace: (pick: number | null) => void
   onChangeName: () => void
   onChangeRole: () => void
   onClose: () => void
@@ -600,8 +604,8 @@ function Settings(props: {
                 {FACES.map((item, pick) => (
                   <button
                     key={item.name}
-                    className={faceOf(props.name, props.face) === item ? 'face active' : 'face'}
-                    aria-pressed={faceOf(props.name, props.face) === item}
+                    className={!props.randomFace && faceOf(props.name, props.face) === item ? 'face active' : 'face'}
+                    aria-pressed={!props.randomFace && faceOf(props.name, props.face) === item}
                     aria-label={item.name}
                     title={item.name}
                     onClick={() => props.onPickFace(pick)}
@@ -610,6 +614,7 @@ function Settings(props: {
                   </button>
                 ))}
               </div>
+              <Toggle label={t('randomFace')} checked={props.randomFace} onChange={(on) => props.onPickFace(on ? null : (props.face ?? 0))} />
               <h2>{t('settingsApp')}</h2>
               {app.store ? (
                 <label className="field">

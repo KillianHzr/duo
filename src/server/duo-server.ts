@@ -323,13 +323,22 @@ export function startDuoServer(options: DuoServerOptions): Promise<DuoServer> {
 
         const name = String(msg.name ?? '').trim().slice(0, 32) || 'Guest'
         const token = randomBytes(16).toString('hex')
+        // Someone who picked no face gets one at random, different from everyone else's while any is left.
         const picked = Number(msg.avatar)
-        const avatar = Number.isInteger(picked) && picked >= 0 && picked < AVATAR_COUNT ? { avatar: picked } : {}
-        client = { info: { id: randomUUID(), name, muted: false, deafened: false, ...avatar }, socket, alive: true, token }
+        let avatar = picked
+        if (!Number.isInteger(picked) || picked < 0 || picked >= AVATAR_COUNT) {
+          const taken = new Set([...clients.values()].map((c) => c.info.avatar))
+          const all = Array.from({ length: AVATAR_COUNT }, (_, i) => i)
+          const free = all.filter((i) => !taken.has(i))
+          const pool = free.length ? free : all
+          avatar = pool[Math.floor(Math.random() * pool.length)]
+        }
+        client = { info: { id: randomUUID(), name, muted: false, deafened: false, avatar }, socket, alive: true, token }
         send(socket, {
           type: 'welcome',
           id: client.info.id,
           peers: [...clients.values()].map((c) => c.info),
+          avatar,
           token: store ? token : undefined
         })
         if (store) {

@@ -23,7 +23,7 @@ export interface PeerInfo {
   name: string
   muted: boolean
   deafened: boolean
-  /** The built-in face they picked, if they picked one. */
+  /** Their built-in face: the one they picked, or the one the host drew for them. */
   avatar?: number
 }
 
@@ -91,7 +91,7 @@ export type RejectReason = 'bad-code' | 'rate-limited' | 'version'
 
 export type ServerMessage =
   /** `token` authorizes this client's HTTP requests for media, while it stays connected. */
-  | { type: 'welcome'; id: string; peers: PeerInfo[]; token?: string }
+  | { type: 'welcome'; id: string; peers: PeerInfo[]; token?: string; avatar?: number }
   | { type: 'rejected'; reason: RejectReason }
   | { type: 'peer-joined'; peer: PeerInfo }
   | { type: 'peer-left'; id: string }

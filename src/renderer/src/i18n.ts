@@ -136,7 +136,8 @@ const en = {
   delayShort: '{ms} ms delay',
   micOn: 'Mic on',
   together: 'Together for {time}',
-  yourFace: 'Your character'
+  yourFace: 'Your character',
+  randomFace: 'A different one every time'
 }
 
 const fr: typeof en = {
@@ -277,7 +278,8 @@ const fr: typeof en = {
   delayShort: '{ms} ms de délai',
   micOn: 'Micro ouvert',
   together: 'Ensemble depuis {time}',
-  yourFace: 'Ton personnage'
+  yourFace: 'Ton personnage',
+  randomFace: 'Un différent à chaque fois'
 }
 
 export type MessageKey = keyof typeof en

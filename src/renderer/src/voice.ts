@@ -96,6 +96,8 @@ export interface VoiceSnapshot {
   status: Status
   error: VoiceError | null
   selfId: string | null
+  /** The face the host gave us for this call, when we picked none ourselves. */
+  selfAvatar: number | undefined
   muted: boolean
   deafened: boolean
 
@@ -175,6 +177,8 @@ export class VoiceEngine {
   private reconnectTimer: number | null = null
   private reconnectDelay = 500
   private selfId: string | null = null
+  /** Drawn by the host when we join, and kept until the app joins or hosts again. */
+  private selfAvatar: number | undefined
   private status: Status = 'idle'
   private error: VoiceError | null = null
   private muted = false
@@ -279,6 +283,7 @@ export class VoiceEngine {
       status: this.status,
       error: this.error,
       selfId: this.selfId,
+      selfAvatar: this.selfAvatar,
       muted: this.muted,
       deafened: this.deafened,
       gateOpen: this.gateOpen,
@@ -302,6 +307,7 @@ export class VoiceEngine {
     this.url = url
     this.name = name
     this.code = code
+    this.selfAvatar = undefined
     this.wanted = true
     this.status = 'connecting'
     this.error = null
@@ -644,7 +650,7 @@ export class VoiceEngine {
     this.ws = ws
 
     ws.onopen = () => {
-      this.send({ type: 'hello', name: this.name, code: this.code, protocol: PROTOCOL_VERSION, avatar: chosenFace() })
+      this.send({ type: 'hello', name: this.name, code: this.code, protocol: PROTOCOL_VERSION, avatar: chosenFace() ?? this.selfAvatar })
     }
 
     ws.onmessage = (event) => {
@@ -679,6 +685,7 @@ export class VoiceEngine {
     switch (message.type) {
       case 'welcome':
         this.selfId = message.id
+        this.selfAvatar = message.avatar
         this.status = 'connected'
         this.error = null
         this.reconnectDelay = 500
