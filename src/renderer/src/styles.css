@@ -12,6 +12,8 @@
   --accent: #f0f0ee;
   --accent-ink: #1c1d20;
   --ok: #6fcf8e;
+  /* Reserved for the ring around whoever is talking: nothing else uses it. */
+  --voice: #ffd23f;
   --warn: #f0c36a;
   --danger: #ed5d5f;
   --radius: 14px;
@@ -536,7 +538,7 @@ button.person[aria-expanded='true'] .avatar {
   font-size: calc(var(--sz) * 0.4);
 }
 
-/* A thin ring in the person's own colour shows who is talking: enough to tell at a glance, too
+/* A thin ring in a colour of its own shows who is talking: enough to tell at a glance, too
    little to pull the eye from a game on the other screen. It only fades when talking starts or stops. */
 .person .avatar {
   box-shadow: 0 0 0 3px transparent;
@@ -544,11 +546,11 @@ button.person[aria-expanded='true'] .avatar {
 }
 
 .avatar.speaking {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 70%, transparent);
+  box-shadow: 0 0 0 3px var(--voice);
 }
 
 .hue-0 {
-  --c: #f2c078;
+  --c: #7fd0c7;
 }
 .hue-1 {
   --c: #8db4e8;
