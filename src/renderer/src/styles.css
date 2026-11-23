@@ -11,8 +11,6 @@
   /* Actions are off-white, with dark text on them. */
   --accent: #f0f0ee;
   --accent-ink: #1c1d20;
-  /* The fire, lit while someone talks. */
-  --ember: #44454d;
   --ok: #6fcf8e;
   --warn: #f0c36a;
   --danger: #ed5d5f;
@@ -480,14 +478,6 @@ button.choice:hover {
     0 0 0 92px color-mix(in srgb, var(--bg-2) 25%, var(--bg-0));
 }
 
-/* Lit while someone talks. It switches at once: a fade here would keep the window drawing. */
-.glow.lit {
-  background: var(--ember);
-  box-shadow:
-    0 0 0 44px color-mix(in srgb, var(--ember) 50%, var(--bg-0)),
-    0 0 0 92px color-mix(in srgb, var(--ember) 22%, var(--bg-0));
-}
-
 .seat {
   position: absolute;
   top: 50%;
@@ -546,11 +536,15 @@ button.person[aria-expanded='true'] .avatar {
   font-size: calc(var(--sz) * 0.4);
 }
 
-/* Soft halos in the person's own colour show who is talking. */
+/* A thin ring in the person's own colour shows who is talking: enough to tell at a glance, too
+   little to pull the eye from a game on the other screen. It only fades when talking starts or stops. */
+.person .avatar {
+  box-shadow: 0 0 0 3px transparent;
+  transition: box-shadow 0.2s ease-out;
+}
+
 .avatar.speaking {
-  box-shadow:
-    0 0 0 calc(var(--sz, 36px) * 0.08) color-mix(in srgb, var(--c) 34%, transparent),
-    0 0 0 calc(var(--sz, 36px) * 0.18) color-mix(in srgb, var(--c) 16%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 70%, transparent);
 }
 
 .hue-0 {
@@ -936,14 +930,19 @@ input.code-input {
   overflow: hidden;
 }
 
-/* Meters grow with a transform, so nothing is laid out again, and jump straight to their value:
-   an animated meter would make the window draw at the screen's full refresh rate, all the time. */
+/* Meters grow with a transform, so nothing is laid out again. */
 .threshold-meter .fill,
 .meter > div {
   height: 100%;
   background: var(--accent);
   transform: scaleX(0);
   transform-origin: left;
+}
+
+/* The microphone meter glides between readings. It lives in the settings, so the window only
+   draws continuously while they are open. */
+.threshold-meter .fill {
+  transition: transform 0.1s linear;
 }
 
 .threshold-meter .fill.closed {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type FormEvent } from 'react'
 import { bindingFromKey, bindingFromMouse, type PttBinding } from '../../shared/keys'
 import { CODE_LENGTH, DUO_PORT, normalizeCode } from '../../shared/protocol'
 import type { AppState, CloseAction, UpdateStatus } from '../../preload/index'
@@ -11,6 +11,7 @@ import type { Levels, PeerStats, PeerView, VoiceEngine, VoiceError } from './voi
 
 type Panel = 'chat' | 'notes'
 
+const SPEAKING_HOLD_MS = 400
 const GATE_MIN_DB = -80
 const GATE_MAX_DB = -10
 
@@ -286,13 +287,13 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
         {voice.error && <div className="error">{errorText(voice.error)}</div>}
       </div>
 
-      {/* The call is a campfire: everyone sits around a glow that lights up when someone talks. */}
+      {/* The call is a campfire: everyone sits around it. It stays still, so it never catches the eye. */}
       <section className="stage">
         <span className={`status ${voice.status}`}>
           {voice.peers.length > 0 && voice.status === 'connected' ? <Together /> : statusLabel[voice.status]}
         </span>
         <div className="fire" style={{ '--sz': `${seats.size}px`, '--r': `${seats.radius}px` } as CSSProperties}>
-          <Glow engine={engine} silent={voice.muted || !sending} />
+          <div className="glow" aria-hidden />
           <div className="seat" style={seats.at(0)}>
             <SelfPerson engine={engine} name={name} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
           </div>
@@ -391,11 +392,32 @@ function seating(count: number): { size: number; radius: number; at: (index: num
   }
 }
 
-/** The glow in the middle, lit while anyone is talking. */
-function Glow({ engine, silent }: { engine: VoiceEngine; silent: boolean }) {
-  const { micDb, peers } = useLevels(engine)
-  const talking = (!silent && dbToLevel(micDb) > 0.08) || Object.values(peers).some((level) => level > 0.08)
-  return <div className={talking ? 'glow lit' : 'glow'} aria-hidden />
+/**
+ * True while someone is talking, and for a moment after: without that, the ring around a face
+ * would flicker between words.
+ */
+function useSpeaking(loud: boolean): boolean {
+  const [speaking, setSpeaking] = useState(false)
+  const timer = useRef<number | null>(null)
+  useEffect(() => {
+    if (loud) {
+      if (timer.current !== null) window.clearTimeout(timer.current)
+      timer.current = null
+      setSpeaking(true)
+    } else if (timer.current === null) {
+      timer.current = window.setTimeout(() => {
+        timer.current = null
+        setSpeaking(false)
+      }, SPEAKING_HOLD_MS)
+    }
+  }, [loud])
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current)
+    },
+    []
+  )
+  return speaking
 }
 
 /** How long the call has been going, refreshed once a minute. */
@@ -792,7 +814,7 @@ function Person(props: {
   open?: boolean
   onClick?: () => void
 }) {
-  const speaking = props.level > 0.08 && !props.muted
+  const speaking = useSpeaking(props.level > 0.08 && !props.muted)
   const content = (
     <>
       <Avatar name={props.name} speaking={speaking} />
