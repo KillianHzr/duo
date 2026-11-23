@@ -27,7 +27,7 @@ export interface Face {
 export const FACES: Face[] = [
   {
     name: 'Braise',
-    art: `<path d="M31 38 C24 22 33 13 40 10 C40 21 49 23 52 30 Z" fill="#f0795a"/><circle cx="50" cy="57" r="30" fill="#f0795a"/><circle cx="76" cy="22" r="4" fill="${CREAM}"/>${eyes(40, 60, 56)}${smile(50, 67)}`
+    art: `<path d="M50 8 C58 22 78 34 78 58 C78 76 66 88 50 88 C34 88 22 76 22 58 C22 46 28 38 34 32 C36 40 40 42 44 40 C40 28 44 16 50 8 Z" fill="#f0795a"/><path d="M50 41 C56 49 66 55 66 67 C66 77 59 84 50 84 C41 84 34 77 34 67 C34 61 37 57 40 54 C42 58 45 58 46 56 C45 50 47 45 50 41 Z" fill="#ffb27a"/>${eyes(44, 56, 66, 3.6, 4.6)}${smile(50, 74, 4)}`
   },
   {
     name: 'Caillou',
