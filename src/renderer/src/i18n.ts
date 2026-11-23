@@ -135,7 +135,8 @@ const en = {
   notesEmptyTitle: 'No note yet',
   delayShort: '{ms} ms delay',
   micOn: 'Mic on',
-  together: 'Together for {time}'
+  together: 'Together for {time}',
+  yourFace: 'Your character'
 }
 
 const fr: typeof en = {
@@ -275,7 +276,8 @@ const fr: typeof en = {
   notesEmptyTitle: 'Pas encore de note',
   delayShort: '{ms} ms de délai',
   micOn: 'Micro ouvert',
-  together: 'Ensemble depuis {time}'
+  together: 'Ensemble depuis {time}',
+  yourFace: 'Ton personnage'
 }
 
 export type MessageKey = keyof typeof en

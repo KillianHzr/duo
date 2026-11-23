@@ -23,6 +23,8 @@ export interface PeerInfo {
   name: string
   muted: boolean
   deafened: boolean
+  /** The built-in face they picked, if they picked one. */
+  avatar?: number
 }
 
 /** WebRTC payload relayed untouched between two clients. */
@@ -36,6 +38,8 @@ export const MAX_TITLE_LENGTH = 200
 export const MAX_FILES_PER_MESSAGE = 10
 export const HISTORY_PAGE = 50
 export const NOTE_COLORS = 6
+/** How many built-in faces someone can pick from. */
+export const AVATAR_COUNT = 10
 
 /** A file kept by the host, fetched over HTTP at /media/<id>. */
 export interface FileRef {
@@ -73,7 +77,7 @@ export interface Note {
 export type NoteDraft = Pick<Note, 'id' | 'title' | 'text' | 'color' | 'pinned'>
 
 export type ClientMessage =
-  | { type: 'hello'; name: string; code: string; protocol: number }
+  | { type: 'hello'; name: string; code: string; protocol: number; avatar?: number }
   | { type: 'signal'; to: string; data: SignalData }
   | { type: 'state'; muted: boolean; deafened: boolean }
   | { type: 'chat-send'; text: string; files: string[] }

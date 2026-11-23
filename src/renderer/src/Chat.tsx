@@ -50,7 +50,7 @@ function linkify(text: string): ReactNode[] {
   )
 }
 
-export function Chat({ space, self }: { space: Space; self: string }) {
+export function Chat({ space, self, faces }: { space: Space; self: string; faces: Record<string, number | undefined> }) {
   const chat = useSyncExternalStore(space.subscribe, space.getSnapshot)
   const [text, setText] = useState('')
   const [files, setFiles] = useState<File[]>([])
@@ -183,7 +183,7 @@ export function Chat({ space, self }: { space: Space; self: string }) {
                 </div>
               )}
               <div className={`msg${grouped ? ' grouped' : ''}${mine ? ' mine' : ''}`} title={timeLabel(message.at)}>
-                {!mine && <div className="msg-gutter">{!grouped && <Avatar name={message.from} />}</div>}
+                {!mine && <div className="msg-gutter">{!grouped && <Avatar name={message.from} pick={faces[message.from]} />}</div>}
                 <div className="msg-content">
                   {!grouped && (
                     <div className="msg-head">

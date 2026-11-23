@@ -516,26 +516,27 @@ button.person:hover {
 
 button.person:hover .avatar,
 button.person[aria-expanded='true'] .avatar {
-  filter: brightness(1.08);
+  filter: brightness(1.1);
 }
 
 .avatar {
-  display: grid;
-  place-items: center;
+  display: block;
   flex-shrink: 0;
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: var(--c);
-  color: var(--bg-0);
-  font-weight: 700;
-  font-size: 15px;
+  overflow: hidden;
+}
+
+.avatar svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .person .avatar {
   width: var(--sz);
   height: var(--sz);
-  font-size: calc(var(--sz) * 0.4);
 }
 
 /* A thin ring in a colour of its own shows who is talking: enough to tell at a glance, too
@@ -547,25 +548,6 @@ button.person[aria-expanded='true'] .avatar {
 
 .avatar.speaking {
   box-shadow: 0 0 0 3px var(--voice);
-}
-
-.hue-0 {
-  --c: #7fd0c7;
-}
-.hue-1 {
-  --c: #8db4e8;
-}
-.hue-2 {
-  --c: #8fd3a6;
-}
-.hue-3 {
-  --c: #f0a3b5;
-}
-.hue-4 {
-  --c: #b7a8f0;
-}
-.hue-5 {
-  --c: #f0a988;
 }
 
 .who {
@@ -916,6 +898,30 @@ input.code-input {
     position: static;
     padding: 16px;
   }
+}
+
+.face-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.face {
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  border-radius: var(--radius);
+  background: none;
+}
+
+.face .avatar {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.face.active {
+  background: var(--bg-4);
 }
 
 /* The level meter sits right under the threshold slider, on the same scale. */

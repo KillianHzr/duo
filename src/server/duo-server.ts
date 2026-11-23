@@ -23,6 +23,7 @@ import {
   type ClientMessage,
   type DiscoveryReply,
   type FileRef,
+  AVATAR_COUNT,
   type PeerInfo,
   type RejectReason,
   type ServerMessage
@@ -322,7 +323,9 @@ export function startDuoServer(options: DuoServerOptions): Promise<DuoServer> {
 
         const name = String(msg.name ?? '').trim().slice(0, 32) || 'Guest'
         const token = randomBytes(16).toString('hex')
-        client = { info: { id: randomUUID(), name, muted: false, deafened: false }, socket, alive: true, token }
+        const picked = Number(msg.avatar)
+        const avatar = Number.isInteger(picked) && picked >= 0 && picked < AVATAR_COUNT ? { avatar: picked } : {}
+        client = { info: { id: randomUUID(), name, muted: false, deafened: false, ...avatar }, socket, alive: true, token }
         send(socket, {
           type: 'welcome',
           id: client.info.id,

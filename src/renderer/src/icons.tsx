@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { faceOf, hash } from './avatars'
 
 const PATHS = {
   mic: (
@@ -72,19 +73,14 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   )
 }
 
-const HUES = 6
-
-/** Everyone keeps the same colour everywhere, picked from their name. */
-export function hue(name: string): number {
-  let sum = 0
-  for (const char of name) sum = (sum * 31 + char.codePointAt(0)!) >>> 0
-  return sum % HUES
-}
-
-export function Avatar({ name, speaking }: { name: string; speaking?: boolean }) {
+/** Someone's face: the character they picked, or the one their name gives them. */
+export function Avatar({ name, pick, speaking }: { name: string; pick?: number | null; speaking?: boolean }) {
   return (
-    <span className={`avatar hue-${hue(name)}${speaking ? ' speaking' : ''}`} aria-hidden>
-      {name.trim().slice(0, 1).toUpperCase()}
+    <span className={speaking ? 'avatar speaking' : 'avatar'} aria-hidden>
+      <svg viewBox="0 0 100 100" dangerouslySetInnerHTML={{ __html: faceOf(name, pick).art }} />
     </span>
   )
 }
+
+/** The colour index of someone's name in the chat. */
+export const hue = (name: string): number => hash(name) % 6

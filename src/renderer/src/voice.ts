@@ -1,3 +1,4 @@
+import { chosenFace } from './avatars'
 import {
   PROTOCOL_VERSION,
   type ClientMessage,
@@ -643,7 +644,7 @@ export class VoiceEngine {
     this.ws = ws
 
     ws.onopen = () => {
-      this.send({ type: 'hello', name: this.name, code: this.code, protocol: PROTOCOL_VERSION })
+      this.send({ type: 'hello', name: this.name, code: this.code, protocol: PROTOCOL_VERSION, avatar: chosenFace() })
     }
 
     ws.onmessage = (event) => {

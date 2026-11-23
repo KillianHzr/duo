@@ -5,6 +5,7 @@ import type { AppState, CloseAction, UpdateStatus } from '../../preload/index'
 import { t, type MessageKey } from './i18n'
 import { Chat } from './Chat'
 import { Notes } from './Notes'
+import { FACES, chosenFace, faceOf } from './avatars'
 import { Avatar, Icon } from './icons'
 import type { Space } from './space'
 import type { Levels, PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
@@ -96,6 +97,8 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
     localStorage.setItem('duo.panel', which)
     setPanel(which)
   }
+  /** The face picked on this computer; the others learn it when we connect. */
+  const [face, setFace] = useState(chosenFace)
   /** The person whose volume and measurements are shown, if any. */
   const [openPeer, setOpenPeer] = useState<string | null>(null)
   const [app, setApp] = useState<AppState | null>(null)
@@ -263,6 +266,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   }
 
   const alone = voice.status === 'connected' && voice.peers.length === 0
+  const faces: Record<string, number | undefined> = { ...Object.fromEntries(voice.peers.map((peer) => [peer.name, peer.avatar])), [name]: face }
   const seats = seating(voice.peers.length + 1)
 
   return (
@@ -295,7 +299,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
         <div className="fire" style={{ '--sz': `${seats.size}px`, '--r': `${seats.radius}px` } as CSSProperties}>
           <div className="glow" aria-hidden />
           <div className="seat" style={seats.at(0)}>
-            <SelfPerson engine={engine} name={name} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
+            <SelfPerson engine={engine} name={name} pick={face} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
           </div>
           {voice.peers.map((peer, i) => (
             <div key={peer.id} className="seat" style={seats.at(i + 1)}>
@@ -348,7 +352,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
             </button>
           ))}
         </div>
-        {panel === 'chat' ? <Chat space={space} self={name} /> : <Notes space={space} self={name} />}
+        {panel === 'chat' ? <Chat space={space} self={name} faces={faces} /> : <Notes space={space} self={name} />}
       </aside>
 
       {showSettings && (
@@ -361,6 +365,14 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
           pttFailed={pttFailed}
           showStats={showStats}
           setShowStats={setShowStats}
+          name={name}
+          face={face}
+          onPickFace={(pick) => {
+            localStorage.setItem('duo.avatar', String(pick))
+            setFace(pick)
+            // The others learn a new face when we connect, so connect again.
+            setAttempt((n) => n + 1)
+          }}
           onChangeName={() => {
             localStorage.removeItem('duo.name')
             setShowSettings(false)
@@ -445,6 +457,9 @@ function Settings(props: {
   pttFailed: boolean
   showStats: boolean
   setShowStats: (value: boolean) => void
+  name: string
+  face: number | undefined
+  onPickFace: (pick: number) => void
   onChangeName: () => void
   onChangeRole: () => void
   onClose: () => void
@@ -580,6 +595,21 @@ function Settings(props: {
 
           {section === 'app' && (
             <>
+              <h2>{t('yourFace')}</h2>
+              <div className="face-grid">
+                {FACES.map((item, pick) => (
+                  <button
+                    key={item.name}
+                    className={faceOf(props.name, props.face) === item ? 'face active' : 'face'}
+                    aria-pressed={faceOf(props.name, props.face) === item}
+                    aria-label={item.name}
+                    title={item.name}
+                    onClick={() => props.onPickFace(pick)}
+                  >
+                    <Avatar name={props.name} pick={pick} />
+                  </button>
+                ))}
+              </div>
               <h2>{t('settingsApp')}</h2>
               {app.store ? (
                 <label className="field">
@@ -813,11 +843,12 @@ function Person(props: {
   note?: string
   open?: boolean
   onClick?: () => void
+  pick?: number | null
 }) {
   const speaking = useSpeaking(props.level > 0.08 && !props.muted)
   const content = (
     <>
-      <Avatar name={props.name} speaking={speaking} />
+      <Avatar name={props.name} pick={props.pick} speaking={speaking} />
       <span className="who">
         <strong>
           {props.name}
@@ -857,9 +888,9 @@ const CONNECTION_NOTE: Partial<Record<RTCPeerConnectionState, MessageKey>> = {
 // rest of the window is not redrawn each time.
 const useLevels = (engine: VoiceEngine): Levels => useSyncExternalStore(engine.subscribeLevels, engine.getLevels)
 
-function SelfPerson(props: { engine: VoiceEngine; name: string; silent: boolean; muted: boolean; deafened: boolean }) {
+function SelfPerson(props: { engine: VoiceEngine; name: string; pick?: number; silent: boolean; muted: boolean; deafened: boolean }) {
   const { micDb } = useLevels(props.engine)
-  return <Person self name={props.name} level={props.silent ? 0 : dbToLevel(micDb)} muted={props.muted} deafened={props.deafened} />
+  return <Person self name={props.name} pick={props.pick} level={props.silent ? 0 : dbToLevel(micDb)} muted={props.muted} deafened={props.deafened} />
 }
 
 function ThresholdMeter({ engine, sending }: { engine: VoiceEngine; sending: boolean }) {
@@ -875,7 +906,7 @@ function PeerLevel(props: { peer: PeerView; engine: VoiceEngine; note?: string; 
   const { peer } = props
   const level = useLevels(props.engine).peers[peer.id] ?? 0
   return (
-    <Person name={peer.name} level={level} muted={peer.muted} deafened={peer.deafened} note={props.note} open={props.open} onClick={props.onClick} />
+    <Person name={peer.name} pick={peer.avatar} level={level} muted={peer.muted} deafened={peer.deafened} note={props.note} open={props.open} onClick={props.onClick} />
   )
 }
 
