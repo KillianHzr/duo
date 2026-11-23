@@ -173,16 +173,20 @@ function quit(): void {
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
-    width: 420,
-    height: 660,
-    minWidth: 360,
-    minHeight: 480,
+    width: 1000,
+    height: 680,
+    minWidth: 380,
+    minHeight: 520,
     show: false,
     title: 'Duo',
     icon: makeIcon(64),
     skipTaskbar: Boolean(e2e?.ui),
     focusable: !e2e?.ui,
-    backgroundColor: '#16171d',
+    backgroundColor: '#1b1d25',
+    // On Windows the page draws the title bar, under the system's own window buttons.
+    ...(process.platform === 'win32'
+      ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#0e0f13', symbolColor: '#959aad', height: 34 } }
+      : {}),
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

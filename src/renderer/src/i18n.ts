@@ -34,7 +34,7 @@ const en = {
   microphone: 'Microphone',
   output: 'Audio output',
   outputVolume: 'Output volume',
-  gate: 'Microphone sensitivity threshold',
+  gate: 'Microphone sensitivity',
   gateHint: 'cuts clicks and breathing while you are not talking',
   gateThreshold: 'Threshold',
   gateOff: 'Everything your microphone picks up is sent.',
@@ -123,7 +123,14 @@ const en = {
   backupDisable: 'Turn off',
   backupLast: 'Last backup: {date}',
   backupFailed: 'The last backup failed ({error})',
-  backupNever: 'No backup made yet.'
+  backupNever: 'No backup made yet.',
+  voiceRoom: 'Voice room',
+  settingsVoice: 'Voice',
+  settingsApp: 'Application',
+  settingsHost: 'Hosting',
+  devices: 'Devices',
+  processing: 'Sound processing',
+  micActivation: 'When the microphone is sent'
 }
 
 const fr: typeof en = {
@@ -162,7 +169,7 @@ const fr: typeof en = {
   microphone: 'Micro',
   output: 'Sortie audio',
   outputVolume: 'Volume de sortie',
-  gate: 'Seuil de sensibilité du micro',
+  gate: 'Sensibilité du micro',
   gateHint: 'coupe les clics et la respiration quand tu ne parles pas',
   gateThreshold: 'Seuil',
   gateOff: 'Tout ce que ton micro capte est envoyé.',
@@ -251,7 +258,14 @@ const fr: typeof en = {
   backupDisable: 'Désactiver',
   backupLast: 'Dernière sauvegarde : {date}',
   backupFailed: 'La dernière sauvegarde a échoué ({error})',
-  backupNever: 'Aucune sauvegarde faite pour le moment.'
+  backupNever: 'Aucune sauvegarde faite pour le moment.',
+  voiceRoom: 'Salon vocal',
+  settingsVoice: 'Voix',
+  settingsApp: 'Application',
+  settingsHost: 'Hébergement',
+  devices: 'Périphériques',
+  processing: 'Traitement du son',
+  micActivation: 'Quand le micro est envoyé'
 }
 
 export type MessageKey = keyof typeof en

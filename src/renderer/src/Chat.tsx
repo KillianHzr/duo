@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -12,6 +13,7 @@ import {
 } from 'react'
 import { MAX_FILES_PER_MESSAGE, MAX_TEXT_LENGTH, type ChatMessage, type FileRef } from '../../shared/protocol'
 import { t } from './i18n'
+import { Avatar, Icon } from './icons'
 import { isAudio, isImage, isVideo, type Space } from './space'
 
 /** Messages from the same person less than this apart are shown as one block. */
@@ -166,16 +168,21 @@ export function Chat({ space, self }: { space: Space; self: string }) {
           const grouped = !newDay && before.from === message.from && message.at - before.at < GROUP_MS
           const mine = message.from === self
           return (
-            <div key={message.id} className={grouped ? 'msg grouped' : 'msg'}>
-              {newDay && <div className="day muted small">{dayLabel(message.at)}</div>}
-              {!grouped && (
-                <div className="msg-head">
-                  <strong className={mine ? 'mine' : undefined}>{message.from}</strong>
-                  <span className="muted small">{timeLabel(message.at)}</span>
+            <Fragment key={message.id}>
+              {newDay && (
+                <div className="day muted small">
+                  <span>{dayLabel(message.at)}</span>
                 </div>
               )}
-              <div className="msg-body" title={timeLabel(message.at)}>
+              <div className={grouped ? 'msg grouped' : 'msg'} title={timeLabel(message.at)}>
+                <div className="msg-gutter">{!grouped && <Avatar name={message.from} />}</div>
                 <div className="msg-content">
+                  {!grouped && (
+                    <div className="msg-head">
+                      <strong>{message.from}</strong>
+                      <span className="muted small">{timeLabel(message.at)}</span>
+                    </div>
+                  )}
                   {message.text && <p>{linkify(message.text)}</p>}
                   {message.files.map((file) => (
                     <Attachment key={file.id} file={file} space={space} onOpen={setViewer} onLoad={settle} />
@@ -193,16 +200,16 @@ export function Chat({ space, self }: { space: Space; self: string }) {
                     </button>
                   ) : (
                     <button
-                      className="msg-action ghost small"
+                      className="msg-action icon-btn"
                       aria-label={t('delete')}
                       title={t('delete')}
                       onClick={() => setConfirming(message.id)}
                     >
-                      ×
+                      <Icon name="trash" size={16} />
                     </button>
                   ))}
               </div>
-            </div>
+            </Fragment>
           )
         })}
       </div>
@@ -212,8 +219,8 @@ export function Chat({ space, self }: { space: Space; self: string }) {
         <div key={upload.id} className={upload.failed ? 'upload failed' : 'upload'}>
           <span className="small">{upload.failed ? `${t('uploadFailed')} — ${upload.name}` : upload.name}</span>
           {upload.failed ? (
-            <button className="ghost small" onClick={() => space.dismissUpload(upload.id)}>
-              ×
+            <button className="icon-btn" aria-label={t('close')} onClick={() => space.dismissUpload(upload.id)}>
+              <Icon name="close" size={16} />
             </button>
           ) : (
             <div className="meter">
@@ -231,19 +238,19 @@ export function Chat({ space, self }: { space: Space; self: string }) {
                 {file.name} · {formatSize(file.size)}
                 <button
                   type="button"
-                  className="ghost"
+                  className="icon-btn"
                   aria-label={t('delete')}
                   onClick={() => setFiles((current) => current.filter((_, at) => at !== i))}
                 >
-                  ×
+                  <Icon name="close" size={14} />
                 </button>
               </span>
             ))}
           </div>
         )}
-        <div className="row">
-          <button type="button" aria-label={t('attach')} title={t('attach')} onClick={() => picker.current?.click()}>
-            +
+        <div className="composer-box">
+          <button type="button" className="icon-btn" aria-label={t('attach')} title={t('attach')} onClick={() => picker.current?.click()}>
+            <Icon name="plus" />
           </button>
           <textarea
             ref={input}
@@ -256,8 +263,14 @@ export function Chat({ space, self }: { space: Space; self: string }) {
             onKeyDown={onKeyDown}
             onPaste={onPaste}
           />
-          <button className="primary" type="submit" disabled={!chat.available || (!text.trim() && !files.length)}>
-            {t('send')}
+          <button
+            className="icon-btn send"
+            type="submit"
+            aria-label={t('send')}
+            title={t('send')}
+            disabled={!chat.available || (!text.trim() && !files.length)}
+          >
+            <Icon name="send" />
           </button>
         </div>
         <input
@@ -308,10 +321,14 @@ function Attachment(props: { file: FileRef; space: Space; onOpen: (file: FileRef
   if (isAudio(file)) return <audio src={space.mediaUrl(file.id)} controls preload="none" />
   return (
     <button className="file" onClick={() => window.duo.download(space.mediaUrl(file.id, true))}>
-      <strong>{file.name}</strong>
-      <span className="muted small">
-        {formatSize(file.size)} · {t('saveFile')}
+      <Icon name="file" size={28} />
+      <span>
+        <strong>{file.name}</strong>
+        <span className="muted small">
+          {formatSize(file.size)} · {t('saveFile')}
+        </span>
       </span>
+      <Icon name="download" size={18} />
     </button>
   )
 }

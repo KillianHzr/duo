@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { MAX_NOTE_LENGTH, MAX_TITLE_LENGTH, NOTE_COLORS, type NoteDraft } from '../../shared/protocol'
 import { t } from './i18n'
+import { Icon } from './icons'
 import type { Space } from './space'
 
 /** How long after the last keystroke a note is sent to the host. */
@@ -15,14 +16,22 @@ export function Notes({ space, self }: { space: Space; self: string }) {
 
   return (
     <section className="notes">
-      <button className="primary" disabled={!available} onClick={() => setEditing(blank())}>
-        {t('newNote')}
-      </button>
-      {notes.length === 0 && <p className="muted small">{t('notesEmpty')}</p>}
+      <div className="notes-head">
+        <button className="primary with-icon" disabled={!available} onClick={() => setEditing(blank())}>
+          <Icon name="plus" size={18} />
+          {t('newNote')}
+        </button>
+      </div>
+      {notes.length === 0 && <p className="muted small empty-chat">{t('notesEmpty')}</p>}
       <div className="note-grid">
         {notes.map((note) => (
           <button key={note.id} className={`note color-${note.color}`} onClick={() => setEditing(note)}>
-            {note.pinned && <span className="pin small">{t('pinned')}</span>}
+            {note.pinned && (
+              <span className="pin small">
+                <Icon name="pin" size={14} />
+                {t('pinned')}
+              </span>
+            )}
             {note.title && <strong>{note.title}</strong>}
             {note.text && <span className="note-text">{note.text}</span>}
           </button>

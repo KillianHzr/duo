@@ -5,6 +5,7 @@ import type { AppState, CloseAction, UpdateStatus } from '../../preload/index'
 import { t, type MessageKey } from './i18n'
 import { Chat } from './Chat'
 import { Notes } from './Notes'
+import { Avatar, Icon } from './icons'
 import type { Space } from './space'
 import type { Levels, PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
 
@@ -12,6 +13,7 @@ type Tab = 'voice' | 'chat' | 'notes'
 
 const GATE_MIN_DB = -80
 const GATE_MAX_DB = -10
+const WIDE = '(min-width: 720px)'
 
 /** Maps a level in dBFS onto the 0..1 width of a meter that spans the gate slider's range. */
 const dbToLevel = (db: number): number => Math.max(0, Math.min(1, (db - GATE_MIN_DB) / (GATE_MAX_DB - GATE_MIN_DB)))
@@ -34,6 +36,10 @@ function errorText(error: VoiceError): string {
 export function App({ engine, space }: { engine: VoiceEngine; space: Space }) {
   return (
     <>
+      <div className="titlebar">
+        <span className="logo" />
+        Duo
+      </div>
       <Main engine={engine} space={space} />
       <ClosePrompt />
     </>
@@ -85,6 +91,9 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   const voice = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
   const shared = useSyncExternalStore(space.subscribe, space.getSnapshot)
   const [tab, setTab] = useState<Tab>('voice')
+  // Wide windows show the voice room beside the rest, so it is not a tab of its own there.
+  const wide = useWide()
+  const view: Tab = wide && tab === 'voice' ? 'chat' : tab
   const [app, setApp] = useState<AppState | null>(null)
   const [name, setName] = useState(() => localStorage.getItem('duo.name') ?? '')
   const [notFound, setNotFound] = useState(false)
@@ -120,9 +129,9 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
 
   // Network measurements are only taken while they are on screen.
   useEffect(() => {
-    engine.setStatsEnabled(showStats && tab === 'voice')
+    engine.setStatsEnabled(showStats && (wide || tab === 'voice'))
     return () => engine.setStatsEnabled(false)
-  }, [engine, showStats, tab])
+  }, [engine, showStats, tab, wide])
 
   const role = app?.role ?? null
   const code = app?.code ?? ''
@@ -156,6 +165,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   if (!role) {
     return (
       <div className="screen center">
+        <Brand />
         <h1>{t('chooseRole')}</h1>
         <button className="choice" onClick={() => void window.duo.host().then(setApp)}>
           <strong>{t('hostTitle')}</strong>
@@ -175,6 +185,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   if (role === 'host' && hostFailed) {
     return (
       <div className="screen center">
+        <Brand />
         <h1>{t('error')}</h1>
         <p className="muted">{app.hostError === 'port-in-use' ? t('portInUse') : app.hostError}</p>
         <button className="primary" onClick={() => void window.duo.host().then(setApp)}>
@@ -206,6 +217,7 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   if (notFound) {
     return (
       <div className="screen center">
+        <Brand />
         <h1>{t('notFoundTitle')}</h1>
         <p className="muted">{t('notFoundHint')}</p>
         <button className="primary" onClick={() => void connect()}>
@@ -246,224 +258,329 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
     error: t('error')
   }
 
+  const selfStatus = voice.deafened ? t('deafened') : voice.muted ? t('muted') : statusLabel[voice.status]
+
   return (
-    <div className="screen">
-      <header>
-        <div>
-          <h1>Duo</h1>
+    <div className={`app view-${view}`}>
+      <aside className="side">
+        <div className="side-head">
+          <span className="label">{t('voiceRoom')}</span>
           <span className={`status ${voice.status}`}>{statusLabel[voice.status]}</span>
         </div>
-        <button className="ghost" onClick={() => setShowSettings((v) => !v)} aria-pressed={showSettings}>
-          {t('settings')}
-        </button>
-      </header>
-
-      {update.ready && (
-        <div className="notice">
-          <span>{t('updateReady', { version: update.ready })}</span>
-          <button onClick={() => window.duo.installUpdate()}>{t('restart')}</button>
-        </div>
-      )}
-      {update.blocked && !update.ready && (
-        <div className="notice">
-          <span>{t('updateBlocked', { version: update.blocked })}</span>
-          <button onClick={() => window.duo.openReleases()}>{t('download')}</button>
-        </div>
-      )}
-      {voice.error && <div className="error">{errorText(voice.error)}</div>}
-
-      {(shared.available || tab !== 'voice') && (
-        <nav className="tabs">
-          {(['voice', 'chat', 'notes'] as const).map((id) => (
-            <button
-              key={id}
-              className={tab === id ? 'tab active' : 'tab'}
-              aria-pressed={tab === id}
-              onClick={() => {
-                setTab(id)
-                setShowSettings(false)
-              }}
-            >
-              {t(id === 'voice' ? 'tabVoice' : id === 'chat' ? 'tabChat' : 'tabNotes')}
-              {id === 'chat' && shared.unread > 0 && <span className="badge">{shared.unread}</span>}
-            </button>
+        <section className="people">
+          <SelfPerson engine={engine} name={name} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
+          {voice.peers.map((peer) => (
+            <PeerRow key={peer.id} peer={peer} engine={engine} showStats={showStats} />
           ))}
-        </nav>
-      )}
+          {voice.status === 'connected' && voice.peers.length === 0 && (
+            <div className="empty">
+              <p className="muted small">{t('alone')}</p>
+              {role === 'host' && <AccessCode code={code} />}
+            </div>
+          )}
+        </section>
+      </aside>
 
-      {tab === 'chat' && !showSettings && <Chat space={space} self={name} />}
-      {tab === 'notes' && !showSettings && <Notes space={space} self={name} />}
-
-      <section className="people" hidden={tab !== 'voice'}>
-        <SelfPerson engine={engine} name={`${name} (${t('you')})`} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
-        {voice.peers.map((peer) => (
-          <PeerRow key={peer.id} peer={peer} engine={engine} showStats={showStats} />
+      <nav className="tabs">
+        {(['voice', 'chat', 'notes'] as const).map((id) => (
+          <button
+            key={id}
+            className={`tab${view === id ? ' active' : ''}${id === 'voice' ? ' narrow-only' : ''}`}
+            aria-pressed={view === id}
+            onClick={() => setTab(id)}
+          >
+            <Icon name={id} size={18} />
+            {t(id === 'voice' ? 'tabVoice' : id === 'chat' ? 'tabChat' : 'tabNotes')}
+            {id === 'chat' && shared.unread > 0 && <span className="badge">{shared.unread}</span>}
+          </button>
         ))}
-        {voice.status === 'connected' && voice.peers.length === 0 && (
-          <div className="empty">
-            <p className="muted small">{t('alone')}</p>
-            {role === 'host' && <AccessCode code={code} />}
+      </nav>
+
+      <div className="notices">
+        {update.ready && (
+          <div className="notice">
+            <span>{t('updateReady', { version: update.ready })}</span>
+            <button className="primary" onClick={() => window.duo.installUpdate()}>
+              {t('restart')}
+            </button>
           </div>
         )}
-      </section>
-
-      {showSettings && (
-        <section className={tab === 'voice' ? 'panel' : 'panel full'}>
-          {role === 'host' && <AccessCode code={code} />}
-          {role === 'host' && <Storage app={app} onChange={setApp} />}
-          <label>
-            {t('microphone')}
-            <select
-              value={voice.settings.inputId}
-              onChange={(event) => void engine.updateSettings({ inputId: event.target.value })}
-            >
-              {voice.inputs.map((device) => (
-                <option key={device.deviceId} value={device.deviceId}>
-                  {device.label || t('microphone')}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t('output')}
-            <select
-              value={voice.settings.outputId}
-              onChange={(event) => void engine.updateSettings({ outputId: event.target.value })}
-            >
-              {voice.outputs.map((device) => (
-                <option key={device.deviceId} value={device.deviceId}>
-                  {device.label || t('output')}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            {t('outputVolume')}
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={Math.round(voice.settings.outputVolume * 100)}
-              onChange={(event) => void engine.updateSettings({ outputVolume: Number(event.target.value) / 100 })}
-            />
-          </label>
-
-          <Toggle
-            label={t('gate')}
-            hint={t('gateHint')}
-            checked={voice.settings.gateEnabled}
-            onChange={(gateEnabled) => void engine.updateSettings({ gateEnabled })}
-          />
-          <div className="threshold">
-            <ThresholdMeter engine={engine} sending={sending} />
-            <input
-              type="range"
-              min={GATE_MIN_DB}
-              max={GATE_MAX_DB}
-              value={voice.settings.gateThresholdDb}
-              disabled={!voice.settings.gateEnabled}
-              aria-label={t('gateThreshold')}
-              onChange={(event) => void engine.updateSettings({ gateThresholdDb: Number(event.target.value) })}
-            />
-            <span className="muted small">
-              {voice.settings.gateEnabled ? `${t('gateThreshold')} ${voice.settings.gateThresholdDb} dB` : t('gateOff')}
-            </span>
-          </div>
-          <PushToTalk
-            enabled={pttEnabled}
-            binding={pttBinding}
-            failed={pttFailed}
-            onChange={(patch) => void engine.updateSettings(patch)}
-          />
-          <button className={voice.testing ? 'toggle on' : 'toggle'} onClick={() => engine.setTesting(!voice.testing)}>
-            {voice.testing ? t('micTestStop') : t('micTest')}
-          </button>
-
-          <Toggle
-            label={t('enhancedSuppression')}
-            hint={t('enhancedHint')}
-            checked={voice.settings.enhancedSuppression}
-            onChange={(enhancedSuppression) => void engine.updateSettings({ enhancedSuppression })}
-          />
-          <Toggle
-            label={t('noiseSuppression')}
-            checked={voice.settings.noiseSuppression || voice.settings.enhancedSuppression}
-            disabled={voice.settings.enhancedSuppression}
-            onChange={(noiseSuppression) => void engine.updateSettings({ noiseSuppression })}
-          />
-          <Toggle
-            label={t('echoCancellation')}
-            hint={t('echoHint')}
-            checked={voice.settings.echoCancellation}
-            onChange={(echoCancellation) => void engine.updateSettings({ echoCancellation })}
-          />
-          <Toggle
-            label={t('autoGain')}
-            checked={voice.settings.autoGainControl}
-            onChange={(autoGainControl) => void engine.updateSettings({ autoGainControl })}
-          />
-          <Toggle label={t('showStats')} checked={showStats} onChange={setShowStats} />
-          {app.store ? (
-            <label>
-              {t('autostartStore')}
-              <button onClick={() => window.duo.openStartupSettings()}>{t('autostartOpen')}</button>
-            </label>
-          ) : (
-            <Toggle
-              label={t('autostart')}
-              checked={app.autostart}
-              onChange={(enabled) => void window.duo.setAutostart(enabled).then(setApp)}
-            />
-          )}
-          <label>
-            {t('closeSetting')}
-            <select
-              value={app.closeAction}
-              onChange={(event) => void window.duo.setCloseAction(event.target.value as CloseAction).then(setApp)}
-            >
-              <option value="ask">{t('closeAsk')}</option>
-              <option value="tray">{t('closeToTray')}</option>
-              <option value="quit">{t('closeQuit')}</option>
-            </select>
-          </label>
-          <div className="row">
-            <button
-              className="ghost"
-              onClick={() => {
-                localStorage.removeItem('duo.name')
-                setName('')
-              }}
-            >
-              {t('changeName')}
-            </button>
-            <button className="ghost" onClick={changeRole}>
-              {t('changeRole')}
+        {update.blocked && !update.ready && (
+          <div className="notice">
+            <span>{t('updateBlocked', { version: update.blocked })}</span>
+            <button className="primary" onClick={() => window.duo.openReleases()}>
+              {t('download')}
             </button>
           </div>
-          <span className="muted small">
-            {t('version')} {app.version}
-          </span>
-        </section>
-      )}
+        )}
+        {voice.error && <div className="error">{errorText(voice.error)}</div>}
+      </div>
 
-      <footer>
+      <main className="main">
+        {view === 'chat' && <Chat space={space} self={name} />}
+        {view === 'notes' && <Notes space={space} self={name} />}
+      </main>
+
+      <div className="userbar">
+        <Avatar name={name} />
+        <div className="who">
+          <strong>{name}</strong>
+          <span className="muted small">{selfStatus}</span>
+        </div>
         <button
-          className={voice.muted ? 'toggle on' : 'toggle'}
+          className={voice.muted ? 'icon-btn on' : 'icon-btn'}
           onClick={() => engine.setMuted(!voice.muted)}
           aria-pressed={voice.muted}
+          aria-label={voice.muted ? t('muted') : t('mute')}
+          title={voice.muted ? t('muted') : t('mute')}
         >
-          {voice.muted ? t('muted') : t('mute')}
+          <Icon name={voice.muted ? 'micOff' : 'mic'} />
         </button>
         <button
-          className={voice.deafened ? 'toggle on' : 'toggle'}
+          className={voice.deafened ? 'icon-btn on' : 'icon-btn'}
           onClick={() => engine.setDeafened(!voice.deafened)}
           aria-pressed={voice.deafened}
+          aria-label={voice.deafened ? t('deafened') : t('deafen')}
+          title={voice.deafened ? t('deafened') : t('deafen')}
         >
-          {voice.deafened ? t('deafened') : t('deafen')}
+          <Icon name={voice.deafened ? 'headphonesOff' : 'headphones'} />
         </button>
-      </footer>
+        <button className="icon-btn" onClick={() => setShowSettings(true)} aria-label={t('settings')} title={t('settings')}>
+          <Icon name="settings" />
+        </button>
+      </div>
+
+      {showSettings && (
+        <Settings
+          engine={engine}
+          voice={voice}
+          app={app}
+          setApp={setApp}
+          sending={sending}
+          pttFailed={pttFailed}
+          showStats={showStats}
+          setShowStats={setShowStats}
+          onChangeName={() => {
+            localStorage.removeItem('duo.name')
+            setShowSettings(false)
+            setName('')
+          }}
+          onChangeRole={() => {
+            setShowSettings(false)
+            changeRole()
+          }}
+          onClose={() => setShowSettings(false)}
+        />
+      )}
     </div>
   )
+}
+
+/** True when the window is wide enough to show the voice room next to the chat. */
+function useWide(): boolean {
+  const [wide, setWide] = useState(() => matchMedia(WIDE).matches)
+  useEffect(() => {
+    const query = matchMedia(WIDE)
+    const onChange = (): void => setWide(query.matches)
+    query.addEventListener('change', onChange)
+    return () => query.removeEventListener('change', onChange)
+  }, [])
+  return wide
+}
+
+type SettingsSection = 'voice' | 'app' | 'host'
+
+function Settings(props: {
+  engine: VoiceEngine
+  voice: ReturnType<VoiceEngine['getSnapshot']>
+  app: AppState
+  setApp: (state: AppState) => void
+  sending: boolean
+  pttFailed: boolean
+  showStats: boolean
+  setShowStats: (value: boolean) => void
+  onChangeName: () => void
+  onChangeRole: () => void
+  onClose: () => void
+}) {
+  const { engine, voice, app, setApp } = props
+  const [section, setSection] = useState<SettingsSection>('voice')
+  const isHost = app.role === 'host'
+  const sections: [SettingsSection, MessageKey][] = [
+    ['voice', 'settingsVoice'],
+    ['app', 'settingsApp'],
+    ...(isHost ? ([['host', 'settingsHost']] as [SettingsSection, MessageKey][]) : [])
+  ]
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') props.onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="overlay" onClick={props.onClose}>
+      <div className="dialog settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" onClick={(e) => e.stopPropagation()}>
+        <div className="settings-nav">
+          <h1 id="settings-title">{t('settings')}</h1>
+          {sections.map(([id, label]) => (
+            <button key={id} className={section === id ? 'nav-item active' : 'nav-item'} aria-pressed={section === id} onClick={() => setSection(id)}>
+              {t(label)}
+            </button>
+          ))}
+          <span className="muted small version">
+            {t('version')} {app.version}
+          </span>
+        </div>
+        <div className="settings-body">
+          <button className="icon-btn settings-close" onClick={props.onClose} aria-label={t('close')} title={t('close')}>
+            <Icon name="close" />
+          </button>
+
+          {section === 'voice' && (
+            <>
+              <h2>{t('devices')}</h2>
+              <label className="field">
+                {t('microphone')}
+                <select value={voice.settings.inputId} onChange={(event) => void engine.updateSettings({ inputId: event.target.value })}>
+                  {voice.inputs.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || t('microphone')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                {t('output')}
+                <select value={voice.settings.outputId} onChange={(event) => void engine.updateSettings({ outputId: event.target.value })}>
+                  {voice.outputs.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>
+                      {device.label || t('output')}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="field">
+                {t('outputVolume')}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(voice.settings.outputVolume * 100)}
+                  onChange={(event) => void engine.updateSettings({ outputVolume: Number(event.target.value) / 100 })}
+                />
+              </label>
+              <button className={voice.testing ? 'toggle on' : 'toggle'} onClick={() => engine.setTesting(!voice.testing)}>
+                {voice.testing ? t('micTestStop') : t('micTest')}
+              </button>
+
+              <h2>{t('micActivation')}</h2>
+              <Toggle
+                label={t('gate')}
+                hint={t('gateHint')}
+                checked={voice.settings.gateEnabled}
+                onChange={(gateEnabled) => void engine.updateSettings({ gateEnabled })}
+              />
+              <div className="threshold">
+                <ThresholdMeter engine={engine} sending={props.sending} />
+                <input
+                  type="range"
+                  min={GATE_MIN_DB}
+                  max={GATE_MAX_DB}
+                  value={voice.settings.gateThresholdDb}
+                  disabled={!voice.settings.gateEnabled}
+                  aria-label={t('gateThreshold')}
+                  onChange={(event) => void engine.updateSettings({ gateThresholdDb: Number(event.target.value) })}
+                />
+                <span className="muted small">
+                  {voice.settings.gateEnabled ? `${t('gateThreshold')} ${voice.settings.gateThresholdDb} dB` : t('gateOff')}
+                </span>
+              </div>
+              <PushToTalk
+                enabled={voice.settings.pttEnabled}
+                binding={voice.settings.pttBinding}
+                failed={props.pttFailed}
+                onChange={(patch) => void engine.updateSettings(patch)}
+              />
+
+              <h2>{t('processing')}</h2>
+              <Toggle
+                label={t('enhancedSuppression')}
+                hint={t('enhancedHint')}
+                checked={voice.settings.enhancedSuppression}
+                onChange={(enhancedSuppression) => void engine.updateSettings({ enhancedSuppression })}
+              />
+              <Toggle
+                label={t('noiseSuppression')}
+                checked={voice.settings.noiseSuppression || voice.settings.enhancedSuppression}
+                disabled={voice.settings.enhancedSuppression}
+                onChange={(noiseSuppression) => void engine.updateSettings({ noiseSuppression })}
+              />
+              <Toggle
+                label={t('echoCancellation')}
+                hint={t('echoHint')}
+                checked={voice.settings.echoCancellation}
+                onChange={(echoCancellation) => void engine.updateSettings({ echoCancellation })}
+              />
+              <Toggle
+                label={t('autoGain')}
+                checked={voice.settings.autoGainControl}
+                onChange={(autoGainControl) => void engine.updateSettings({ autoGainControl })}
+              />
+            </>
+          )}
+
+          {section === 'app' && (
+            <>
+              <h2>{t('settingsApp')}</h2>
+              {app.store ? (
+                <label className="field">
+                  {t('autostartStore')}
+                  <button onClick={() => window.duo.openStartupSettings()}>{t('autostartOpen')}</button>
+                </label>
+              ) : (
+                <Toggle
+                  label={t('autostart')}
+                  checked={app.autostart}
+                  onChange={(enabled) => void window.duo.setAutostart(enabled).then(setApp)}
+                />
+              )}
+              <Toggle label={t('showStats')} checked={props.showStats} onChange={props.setShowStats} />
+              <label className="field">
+                {t('closeSetting')}
+                <select
+                  value={app.closeAction}
+                  onChange={(event) => void window.duo.setCloseAction(event.target.value as CloseAction).then(setApp)}
+                >
+                  <option value="ask">{t('closeAsk')}</option>
+                  <option value="tray">{t('closeToTray')}</option>
+                  <option value="quit">{t('closeQuit')}</option>
+                </select>
+              </label>
+              <div className="row wrap">
+                <button onClick={props.onChangeName}>{t('changeName')}</button>
+                <button onClick={props.onChangeRole}>{t('changeRole')}</button>
+              </div>
+            </>
+          )}
+
+          {section === 'host' && isHost && (
+            <>
+              <h2>{t('settingsHost')}</h2>
+              <AccessCode code={app.code} />
+              <Storage app={app} onChange={setApp} />
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Brand() {
+  return <div className="brand" aria-hidden />
 }
 
 function NameForm({ onSubmit }: { onSubmit: (name: string) => void }) {
@@ -477,6 +594,7 @@ function NameForm({ onSubmit }: { onSubmit: (name: string) => void }) {
   }
   return (
     <form className="screen center" onSubmit={submit}>
+      <Brand />
       <h1>{t('welcome')}</h1>
       <p className="muted">{t('askName')}</p>
       <input autoFocus value={value} onChange={(event) => setValue(event.target.value)} placeholder={t('namePlaceholder')} />
@@ -498,6 +616,7 @@ function CodeForm(props: { error: string | null; onSubmit: (code: string) => voi
         if (code.length === CODE_LENGTH) props.onSubmit(code)
       }}
     >
+      <Brand />
       <h1>{t('codeTitle')}</h1>
       <p className="muted">{t('codeHint')}</p>
       {props.error && <div className="error">{props.error}</div>}
@@ -639,21 +758,28 @@ function AccessCode({ code }: { code: string }) {
   )
 }
 
-function Person(props: { name: string; level: number; muted: boolean; deafened: boolean; note?: string }) {
+function Person(props: { name: string; self?: boolean; level: number; muted: boolean; deafened: boolean; note?: string }) {
   const speaking = props.level > 0.08 && !props.muted
   return (
     <div className="person">
-      <div className={speaking ? 'avatar speaking' : 'avatar'}>{props.name.slice(0, 1).toUpperCase()}</div>
+      <Avatar name={props.name} speaking={speaking} />
       <div className="who">
-        <strong>{props.name}</strong>
-        <span className="muted small">
-          {[props.muted && t('micOff'), props.deafened && t('soundOff'), props.note].filter(Boolean).join(' · ') ||
-            ' '}
+        <strong>
+          {props.name}
+          {props.self && <span className="muted"> ({t('you')})</span>}
+        </strong>
+        {props.note && <span className="muted small">{props.note}</span>}
+      </div>
+      {props.muted && (
+        <span className="flag" title={t('micOff')}>
+          <Icon name="micOff" size={16} />
         </span>
-      </div>
-      <div className="meter" aria-hidden>
-        <div style={{ transform: `scaleX(${props.level.toFixed(3)})` }} />
-      </div>
+      )}
+      {props.deafened && (
+        <span className="flag" title={t('soundOff')}>
+          <Icon name="headphonesOff" size={16} />
+        </span>
+      )}
     </div>
   )
 }
@@ -671,7 +797,7 @@ const useLevels = (engine: VoiceEngine): Levels => useSyncExternalStore(engine.s
 
 function SelfPerson(props: { engine: VoiceEngine; name: string; silent: boolean; muted: boolean; deafened: boolean }) {
   const { micDb } = useLevels(props.engine)
-  return <Person name={props.name} level={props.silent ? 0 : dbToLevel(micDb)} muted={props.muted} deafened={props.deafened} />
+  return <Person self name={props.name} level={props.silent ? 0 : dbToLevel(micDb)} muted={props.muted} deafened={props.deafened} />
 }
 
 function ThresholdMeter({ engine, sending }: { engine: VoiceEngine; sending: boolean }) {
@@ -693,8 +819,8 @@ function PeerRow({ peer, engine, showStats }: { peer: PeerView; engine: VoiceEng
   return (
     <div className="peer">
       <PeerLevel peer={peer} engine={engine} note={note && t(note)} />
-      <label className="volume">
-        <span className="small muted">{t('volume')}</span>
+      <label className="volume" title={t('volume')}>
+        <Icon name="voice" size={16} />
         <input
           type="range"
           min={0}
@@ -745,16 +871,17 @@ function Toggle(props: {
 }) {
   return (
     <label className="check">
+      <span>
+        {props.label}
+        {props.hint && <span className="muted small hint">{props.hint}</span>}
+      </span>
       <input
         type="checkbox"
+        role="switch"
         checked={props.checked}
         disabled={props.disabled}
         onChange={(event) => props.onChange(event.target.checked)}
       />
-      <span>
-        {props.label}
-        {props.hint && <span className="muted small"> — {props.hint}</span>}
-      </span>
     </label>
   )
 }
