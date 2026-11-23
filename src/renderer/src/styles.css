@@ -1,24 +1,25 @@
 :root {
-  /* Neutral greys; the only colours are the faces of the people in the call. */
-  --bg-0: #18181b;
-  --bg-1: #1f1f23;
-  --bg-2: #27272c;
-  --bg-3: #313137;
-  --bg-4: #3e3e46;
-  --line: rgb(255 255 255 / 9%);
-  --text: #eeeef0;
-  --muted: #9b9ba6;
-  /* Actions are off-white, with dark text on them. */
-  --accent: #f1f1ee;
-  --accent-ink: #18181b;
-  --ok: #8fe3a8;
+  /* A dusk-blue room lit by one warm light. */
+  --bg-0: #20242e;
+  --bg-1: #2b303c;
+  --bg-2: #323846;
+  --bg-3: #3a4050;
+  --bg-4: #474e60;
+  --line: rgb(233 230 223 / 10%);
+  --text: #e9e6df;
+  --muted: #9198a8;
+  /* The warm light: actions, and the fire when someone talks. Text on it is dark. */
+  --accent: #ffc978;
+  --accent-ink: #20242e;
+  --ember: #4a4234;
+  --ok: #9fd6a6;
   --warn: #f0c36a;
-  --danger: #f0686a;
+  --danger: #ec6f6a;
   --radius: 14px;
   --radius-l: 22px;
   color-scheme: dark;
-  font-family: 'Nunito Variable', 'Segoe UI', system-ui, sans-serif;
-  font-size: 15px;
+  font-family: 'Manrope Variable', 'Segoe UI', system-ui, sans-serif;
+  font-size: 14.5px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -48,7 +49,7 @@ body {
 h1 {
   margin: 0;
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 h2 {
@@ -374,18 +375,14 @@ button.choice:hover {
   background: var(--bg-3);
 }
 
-/* ----- Main layout: the call fills the window; chat and notes open beside it ----- */
+/* ----- Main layout: the campfire (the call) and, beside it, what people share ----- */
 
 .app {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-rows: auto minmax(0, 1fr);
   flex: 1;
   min-height: 0;
-}
-
-.app.with-panel {
-  grid-template-columns: minmax(0, 1fr) 380px;
 }
 
 .notices {
@@ -417,25 +414,21 @@ button.choice:hover {
   padding: 5px 12px;
 }
 
-/* The stage: everyone in the call, in the middle. */
 .stage {
-  grid-column: 1;
-  grid-row: 2;
   position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  gap: 40px;
+  min-width: 0;
   min-height: 0;
-  padding: 48px 24px 16px;
-  overflow-y: auto;
+  padding: 44px 16px 22px;
+  overflow: hidden;
 }
 
 .status {
   position: absolute;
-  top: 14px;
-  left: 18px;
+  top: 12px;
+  left: 20px;
   color: var(--muted);
   font-size: 13px;
   white-space: nowrap;
@@ -464,34 +457,73 @@ button.choice:hover {
   background: var(--danger);
 }
 
-.people {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 24px 40px;
+/* Everyone sits on a circle of radius --r around the glow; --a is each seat's angle. */
+.fire {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 270px;
+  height: 270px;
+  margin: -135px 0 0 -135px;
+  border-radius: 50%;
+  background: var(--bg-2);
+  box-shadow:
+    0 0 0 44px color-mix(in srgb, var(--bg-2) 55%, var(--bg-0)),
+    0 0 0 92px color-mix(in srgb, var(--bg-2) 25%, var(--bg-0));
+}
+
+/* Lit while someone talks. It switches at once: a fade here would keep the window drawing. */
+.glow.lit {
+  background: var(--ember);
+  box-shadow:
+    0 0 0 44px color-mix(in srgb, var(--ember) 50%, var(--bg-0)),
+    0 0 0 92px color-mix(in srgb, var(--ember) 22%, var(--bg-0));
+}
+
+.seat {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: rotate(var(--a)) translateY(calc(-1 * var(--r))) rotate(calc(-1 * var(--a)));
 }
 
 .peer {
   position: relative;
 }
 
+/* A seat is a point: the face is centred on it and the name hangs below. */
 .person {
-  position: relative;
+  position: absolute;
+  top: calc(var(--sz) / -2);
+  left: calc(var(--sz) / -2 - 20px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
-  width: 168px;
-  padding: 16px 8px;
-  border-radius: var(--radius-l);
+  gap: 8px;
+  width: calc(var(--sz) + 40px);
+  padding: 0;
+  border-radius: var(--radius);
   background: none;
   font-weight: 400;
   text-align: center;
 }
 
-button.person:hover,
-button.person[aria-expanded='true'] {
-  background: var(--bg-2);
+button.person:hover {
+  background: none;
+}
+
+button.person:hover .avatar,
+button.person[aria-expanded='true'] .avatar {
+  filter: brightness(1.08);
 }
 
 .avatar {
@@ -501,66 +533,56 @@ button.person[aria-expanded='true'] {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  color: #26262b;
-  font-weight: 800;
+  background: var(--c);
+  color: var(--bg-0);
+  font-weight: 700;
   font-size: 15px;
 }
 
 .person .avatar {
-  width: 128px;
-  height: 128px;
-  font-size: 54px;
+  width: var(--sz);
+  height: var(--sz);
+  font-size: calc(var(--sz) * 0.4);
 }
 
-/* A plain ring shows who is talking. It appears at once: an animated one would keep the window drawing. */
+/* Soft halos in the person's own colour show who is talking. */
 .avatar.speaking {
   box-shadow:
-    0 0 0 6px var(--bg-0),
-    0 0 0 11px var(--ok);
+    0 0 0 calc(var(--sz, 36px) * 0.08) color-mix(in srgb, var(--c) 34%, transparent),
+    0 0 0 calc(var(--sz, 36px) * 0.18) color-mix(in srgb, var(--c) 16%, transparent);
 }
 
 .hue-0 {
-  background: #ffb88c;
+  --c: #ffc978;
 }
 .hue-1 {
-  background: #f3d08a;
+  --c: #8fb8c9;
 }
 .hue-2 {
-  background: #b3dba0;
+  --c: #a9cfa4;
 }
 .hue-3 {
-  background: #a3cfe8;
+  --c: #e8a9b8;
 }
 .hue-4 {
-  background: #cdbcf3;
+  --c: #b9aee0;
 }
 .hue-5 {
-  background: #f3aec6;
+  --c: #e6c9a0;
 }
 
 .who {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   width: 100%;
   min-width: 0;
 }
 
 .who strong {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-/* The delay to that person: the reason this app exists, so it is shown plainly. */
-.who .note {
-  padding: 3px 12px;
-  border-radius: 999px;
-  background: var(--bg-2);
-  color: var(--muted);
-  font-size: 13px;
+  font-size: clamp(13px, calc(var(--sz) * 0.16), 18px);
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 .who strong,
@@ -572,19 +594,27 @@ button.person[aria-expanded='true'] {
 }
 
 .who strong .muted {
-  font-weight: 400;
+  font-weight: 500;
+}
+
+/* The delay to that person: the reason this app exists, so it is shown plainly. */
+.who .note {
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Microphone or sound switched off: a badge on the corner of the face. */
 .flag {
   position: absolute;
-  top: 112px;
+  top: calc(var(--sz) - 26px);
   right: 14px;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 4px solid var(--bg-0);
+  width: 30px;
+  height: 30px;
+  border: 3px solid var(--bg-0);
   border-radius: 50%;
   background: var(--danger);
   color: #fff;
@@ -597,14 +627,13 @@ button.person[aria-expanded='true'] {
 
 .popover {
   position: absolute;
-  top: calc(100% + 4px);
-  left: 50%;
+  top: calc(var(--sz) / 2 + 58px);
+  left: -130px;
   z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 12px;
   width: 260px;
-  margin-left: -130px;
   padding: 14px;
   border-radius: var(--radius-l);
   background: var(--bg-3);
@@ -638,7 +667,8 @@ button.person[aria-expanded='true'] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  margin-bottom: 18px;
   text-align: center;
 }
 
@@ -675,54 +705,85 @@ input.code-input {
   text-transform: uppercase;
 }
 
-/* The call controls, always under the stage. */
+/* The call controls: one pill under the fire. */
 .dock {
-  grid-column: 1;
-  grid-row: 3;
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 10px;
-  padding: 12px 16px 24px;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 999px;
+  background: var(--bg-1);
 }
 
 .dock-btn {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 60px;
-  height: 60px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--bg-3);
-}
-
-.dock-btn.small-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
   width: 46px;
   height: 46px;
-  background: var(--bg-2);
-  color: var(--muted);
+  padding: 0;
+  border-radius: 999px;
+  background: var(--bg-3);
 }
 
 .dock-btn:hover {
   background: var(--bg-4);
-  color: var(--text);
 }
 
-.dock-btn.on {
-  background: var(--danger);
-  color: #fff;
-}
-
-.dock-btn.active {
+.dock-btn.main {
+  width: auto;
+  padding: 0 20px 0 16px;
   background: var(--accent);
   color: var(--accent-ink);
 }
 
-.dock-btn .badge {
-  position: absolute;
-  top: -2px;
-  right: -2px;
+.dock-btn.main:hover {
+  background: var(--accent);
+  filter: brightness(1.06);
+}
+
+.dock-btn.on,
+.dock-btn.main.on {
+  background: var(--danger);
+  color: #fff;
+}
+
+/* What people share, beside the fire. */
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin: 0 12px 12px 0;
+  border-radius: var(--radius-l);
+  background: var(--bg-1);
+  overflow: hidden;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 14px 14px 6px;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: none;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+
+.tab:hover {
+  background: none;
+  color: var(--text);
+}
+
+.tab.active {
+  background: var(--bg-3);
+  color: var(--text);
 }
 
 .badge {
@@ -737,58 +798,21 @@ input.code-input {
   text-align: center;
 }
 
-.divider {
-  width: 1px;
-  height: 24px;
-  margin: 0 6px;
-  background: var(--line);
-}
-
-/* Chat or notes, beside the call. */
-.side-panel {
-  grid-column: 2;
-  grid-row: 2 / 4;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  background: var(--bg-1);
-}
-
-.panel-head {
-  padding: 14px 16px 6px;
-}
-
-/* Narrow window: the panel takes the place of the stage; the controls stay. */
+/* Narrow window: the fire on top, what is shared underneath. */
 @media (max-width: 759.9px) {
-  .app.with-panel {
+  .app {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .app.with-panel .stage {
-    display: none;
+    grid-template-rows: auto minmax(300px, 1.1fr) minmax(0, 1fr);
   }
 
   .side-panel {
-    grid-column: 1;
-    grid-row: 2;
+    margin: 0 10px 10px;
   }
 
-  .dock {
-    padding-bottom: 14px;
-  }
-
-  .person {
-    width: 132px;
-  }
-
-  .person .avatar {
-    width: 96px;
-    height: 96px;
-    font-size: 40px;
-  }
-
-  .flag {
-    top: 84px;
+  .glow {
+    width: 210px;
+    height: 210px;
+    margin: -105px 0 0 -105px;
   }
 }
 
@@ -1106,7 +1130,7 @@ input.code-input {
 }
 
 .msg-head strong {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .name-0 {
@@ -1310,8 +1334,7 @@ button.file strong {
 
 .notes-head {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  justify-content: flex-end;
 }
 
 .note-grid {

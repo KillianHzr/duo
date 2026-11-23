@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useSyncExternalStore, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, useSyncExternalStore, type CSSProperties, type FormEvent } from 'react'
 import { bindingFromKey, bindingFromMouse, type PttBinding } from '../../shared/keys'
 import { CODE_LENGTH, DUO_PORT, normalizeCode } from '../../shared/protocol'
 import type { AppState, CloseAction, UpdateStatus } from '../../preload/index'
@@ -89,16 +89,11 @@ function ClosePrompt() {
 function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   const voice = useSyncExternalStore(engine.subscribe, engine.getSnapshot)
   const shared = useSyncExternalStore(space.subscribe, space.getSnapshot)
-  // The call is always on screen; chat or notes open beside it. A roomy window starts with the chat.
-  const [panel, setPanel] = useState<Panel | null>(() => {
-    const saved = localStorage.getItem('duo.panel')
-    if (saved !== null) return saved === 'chat' || saved === 'notes' ? saved : null
-    return matchMedia('(min-width: 900px)').matches ? 'chat' : null
-  })
-  const togglePanel = (which: Panel): void => {
-    const next = panel === which ? null : which
-    localStorage.setItem('duo.panel', next ?? '')
-    setPanel(next)
+  // Beside the call: what people share, or their notes.
+  const [panel, setPanel] = useState<Panel>(() => (localStorage.getItem('duo.panel') === 'notes' ? 'notes' : 'chat'))
+  const choosePanel = (which: Panel): void => {
+    localStorage.setItem('duo.panel', which)
+    setPanel(which)
   }
   /** The person whose volume and measurements are shown, if any. */
   const [openPeer, setOpenPeer] = useState<string | null>(null)
@@ -267,9 +262,10 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
   }
 
   const alone = voice.status === 'connected' && voice.peers.length === 0
+  const seats = seating(voice.peers.length + 1)
 
   return (
-    <div className={panel ? 'app with-panel' : 'app'}>
+    <div className="app">
       <div className="notices">
         {update.ready && (
           <div className="notice">
@@ -290,20 +286,26 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
         {voice.error && <div className="error">{errorText(voice.error)}</div>}
       </div>
 
-      {/* The call is the heart of the app: everyone in it, in the middle of the window. */}
+      {/* The call is a campfire: everyone sits around a glow that lights up when someone talks. */}
       <section className="stage">
-        <span className={`status ${voice.status}`}>{statusLabel[voice.status]}</span>
-        <div className="people">
-          <SelfPerson engine={engine} name={name} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
-          {voice.peers.map((peer) => (
-            <PeerRow
-              key={peer.id}
-              peer={peer}
-              engine={engine}
-              showStats={showStats}
-              open={openPeer === peer.id}
-              onToggle={() => setOpenPeer(openPeer === peer.id ? null : peer.id)}
-            />
+        <span className={`status ${voice.status}`}>
+          {voice.peers.length > 0 && voice.status === 'connected' ? <Together /> : statusLabel[voice.status]}
+        </span>
+        <div className="fire" style={{ '--sz': `${seats.size}px`, '--r': `${seats.radius}px` } as CSSProperties}>
+          <Glow engine={engine} silent={voice.muted || !sending} />
+          <div className="seat" style={seats.at(0)}>
+            <SelfPerson engine={engine} name={name} silent={voice.muted || !sending} muted={voice.muted} deafened={voice.deafened} />
+          </div>
+          {voice.peers.map((peer, i) => (
+            <div key={peer.id} className="seat" style={seats.at(i + 1)}>
+              <PeerRow
+                peer={peer}
+                engine={engine}
+                showStats={showStats}
+                open={openPeer === peer.id}
+                onToggle={() => setOpenPeer(openPeer === peer.id ? null : peer.id)}
+              />
+            </div>
           ))}
         </div>
         {alone && (
@@ -312,66 +314,41 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
             {role === 'host' && <AccessCode code={code} />}
           </div>
         )}
+        <div className="dock">
+          <button
+            className={voice.muted ? 'dock-btn main on' : 'dock-btn main'}
+            onClick={() => engine.setMuted(!voice.muted)}
+            aria-pressed={voice.muted}
+          >
+            <Icon name={voice.muted ? 'micOff' : 'mic'} />
+            {voice.muted ? t('muted') : t('micOn')}
+          </button>
+          <button
+            className={voice.deafened ? 'dock-btn on' : 'dock-btn'}
+            onClick={() => engine.setDeafened(!voice.deafened)}
+            aria-pressed={voice.deafened}
+            aria-label={voice.deafened ? t('deafened') : t('deafen')}
+            title={voice.deafened ? t('deafened') : t('deafen')}
+          >
+            <Icon name={voice.deafened ? 'headphonesOff' : 'headphones'} />
+          </button>
+          <button className="dock-btn" onClick={() => setShowSettings(true)} aria-label={t('settings')} title={t('settings')}>
+            <Icon name="settings" />
+          </button>
+        </div>
       </section>
 
-      <div className="dock">
-        <button
-          className={voice.muted ? 'dock-btn on' : 'dock-btn'}
-          onClick={() => engine.setMuted(!voice.muted)}
-          aria-pressed={voice.muted}
-          aria-label={voice.muted ? t('muted') : t('mute')}
-          title={voice.muted ? t('muted') : t('mute')}
-        >
-          <Icon name={voice.muted ? 'micOff' : 'mic'} size={24} />
-        </button>
-        <button
-          className={voice.deafened ? 'dock-btn on' : 'dock-btn'}
-          onClick={() => engine.setDeafened(!voice.deafened)}
-          aria-pressed={voice.deafened}
-          aria-label={voice.deafened ? t('deafened') : t('deafen')}
-          title={voice.deafened ? t('deafened') : t('deafen')}
-        >
-          <Icon name={voice.deafened ? 'headphonesOff' : 'headphones'} size={24} />
-        </button>
-        <span className="divider" />
-        <button
-          className={panel === 'chat' ? 'dock-btn small-btn active' : 'dock-btn small-btn'}
-          onClick={() => togglePanel('chat')}
-          aria-pressed={panel === 'chat'}
-          aria-label={t('tabChat')}
-          title={t('tabChat')}
-        >
-          <Icon name="chat" />
-          {panel !== 'chat' && shared.unread > 0 && <span className="badge">{shared.unread}</span>}
-        </button>
-        <button
-          className={panel === 'notes' ? 'dock-btn small-btn active' : 'dock-btn small-btn'}
-          onClick={() => togglePanel('notes')}
-          aria-pressed={panel === 'notes'}
-          aria-label={t('tabNotes')}
-          title={t('tabNotes')}
-        >
-          <Icon name="notes" />
-        </button>
-        <button className="dock-btn small-btn" onClick={() => setShowSettings(true)} aria-label={t('settings')} title={t('settings')}>
-          <Icon name="settings" />
-        </button>
-      </div>
-
-      {panel && (
-        <aside className="side-panel">
-          {panel === 'chat' ? (
-            <>
-              <div className="panel-head">
-                <h1>{t('tabChat')}</h1>
-              </div>
-              <Chat space={space} self={name} />
-            </>
-          ) : (
-            <Notes space={space} self={name} />
-          )}
-        </aside>
-      )}
+      <aside className="side-panel">
+        <div className="tabs">
+          {(['chat', 'notes'] as const).map((id) => (
+            <button key={id} className={panel === id ? 'tab active' : 'tab'} aria-pressed={panel === id} onClick={() => choosePanel(id)}>
+              {t(id === 'chat' ? 'tabChat' : 'tabNotes')}
+              {id === 'chat' && panel !== 'chat' && shared.unread > 0 && <span className="badge">{shared.unread}</span>}
+            </button>
+          ))}
+        </div>
+        {panel === 'chat' ? <Chat space={space} self={name} /> : <Notes space={space} self={name} />}
+      </aside>
 
       {showSettings && (
         <Settings
@@ -397,6 +374,42 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
       )}
     </div>
   )
+}
+
+/**
+ * Where everyone sits around the fire. Two people sit side by side; from three up they form a
+ * circle, with smaller faces as the circle fills, so a whole LAN party fits.
+ */
+function seating(count: number): { size: number; radius: number; at: (index: number) => CSSProperties } {
+  const [size, radius] =
+    count <= 1 ? [118, 0] : count === 2 ? [118, 72] : count === 3 ? [100, 118] : count === 4 ? [92, 132] : count <= 6 ? [80, 150] : count <= 8 ? [68, 165] : [56, 180]
+  return {
+    size,
+    radius,
+    // The first seat is on the left, the others follow clockwise.
+    at: (index) => ({ '--a': `${-90 + (360 / Math.max(count, 1)) * index}deg` }) as CSSProperties
+  }
+}
+
+/** The glow in the middle, lit while anyone is talking. */
+function Glow({ engine, silent }: { engine: VoiceEngine; silent: boolean }) {
+  const { micDb, peers } = useLevels(engine)
+  const talking = (!silent && dbToLevel(micDb) > 0.08) || Object.values(peers).some((level) => level > 0.08)
+  return <div className={talking ? 'glow lit' : 'glow'} aria-hidden />
+}
+
+/** How long the call has been going, refreshed once a minute. */
+function Together() {
+  const [start] = useState(() => Date.now())
+  const [, tick] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => tick((n) => n + 1), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
+  const minutes = Math.floor((Date.now() - start) / 60_000)
+  if (minutes < 1) return <>{t('inCall')}</>
+  const time = minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')}`
+  return <>{t('together', { time })}</>
 }
 
 type SettingsSection = 'voice' | 'app' | 'host'

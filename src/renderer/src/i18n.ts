@@ -94,7 +94,7 @@ const en = {
   tabChat: 'Shared',
   tabNotes: 'Notes',
   chatPlaceholder: 'Drop a link, a photo, a note…',
-  chatEmpty: 'Send each other links, photos, videos and files. Everything stays at home, on the host computer.',
+  chatEmpty: 'Send each other links, photos, videos and files.',
   chatOffline: 'Not connected to the host: messages cannot be sent right now.',
   send: 'Send',
   attach: 'Attach files',
@@ -106,7 +106,7 @@ const en = {
   uploadFailed: 'Could not send',
   sizeUnits: 'B,kB,MB,GB',
   newNote: 'New note',
-  notesEmpty: 'Notes are shared with everyone in the call.',
+  notesEmpty: 'Everyone in the call can read and edit them.',
   noteTitle: 'Title',
   noteText: 'Note',
   noteColor: 'Colour',
@@ -131,9 +131,11 @@ const en = {
   devices: 'Devices',
   processing: 'Sound processing',
   micActivation: 'When the microphone is sent',
-  chatEmptyTitle: 'Your shared corner',
+  chatEmptyTitle: 'Nothing shared yet',
   notesEmptyTitle: 'No note yet',
-  delayShort: '{ms} ms delay'
+  delayShort: '{ms} ms delay',
+  micOn: 'Mic on',
+  together: 'Together for {time}'
 }
 
 const fr: typeof en = {
@@ -232,7 +234,7 @@ const fr: typeof en = {
   tabChat: 'Partage',
   tabNotes: 'Notes',
   chatPlaceholder: 'Un lien, une photo, un mot…',
-  chatEmpty: 'Envoyez-vous des liens, des photos, des vidéos, des fichiers. Tout reste chez vous, sur le PC hôte.',
+  chatEmpty: 'Envoyez-vous des liens, des photos, des vidéos, des fichiers.',
   chatOffline: "Pas de connexion à l'hôte : impossible d'envoyer des messages pour le moment.",
   send: 'Envoyer',
   attach: 'Joindre des fichiers',
@@ -244,7 +246,7 @@ const fr: typeof en = {
   uploadFailed: "Échec de l'envoi",
   sizeUnits: 'o,Ko,Mo,Go',
   newNote: 'Nouvelle note',
-  notesEmpty: "Les notes sont partagées avec toutes les personnes de l'appel.",
+  notesEmpty: "Tout le monde dans l'appel peut les lire et les modifier.",
   noteTitle: 'Titre',
   noteText: 'Note',
   noteColor: 'Couleur',
@@ -269,9 +271,11 @@ const fr: typeof en = {
   devices: 'Périphériques',
   processing: 'Traitement du son',
   micActivation: 'Quand le micro est envoyé',
-  chatEmptyTitle: 'Votre coin à deux',
+  chatEmptyTitle: 'Rien de partagé pour le moment',
   notesEmptyTitle: 'Pas encore de note',
-  delayShort: '{ms} ms de délai'
+  delayShort: '{ms} ms de délai',
+  micOn: 'Micro ouvert',
+  together: 'Ensemble depuis {time}'
 }
 
 export type MessageKey = keyof typeof en

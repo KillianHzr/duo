@@ -17,7 +17,6 @@ export function Notes({ space, self }: { space: Space; self: string }) {
   return (
     <section className="notes">
       <div className="notes-head">
-        <h1>{t('tabNotes')}</h1>
         <button className="primary with-icon" disabled={!available} onClick={() => setEditing(blank())}>
           <Icon name="plus" size={18} />
           {t('newNote')}
