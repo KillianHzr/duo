@@ -1,21 +1,19 @@
 :root {
-  --bg-0: #0a0b0f;
-  --bg-1: #13141a;
-  --bg-2: #191b23;
-  --bg-3: #21242e;
-  --bg-4: #2d313f;
-  --line: rgb(255 255 255 / 7%);
-  --text: #f1f2f7;
-  --muted: #8e93a8;
-  --accent: #8b7bff;
-  --accent-2: #d06bff;
-  --accent-text: #b0a6ff;
-  --gradient: linear-gradient(135deg, var(--accent), var(--accent-2));
-  --ok: #3ddc97;
-  --warn: #f5b83d;
-  --danger: #f2555e;
-  --radius: 12px;
-  --radius-l: 18px;
+  --bg-0: #0e0e0d;
+  --bg-1: #161615;
+  --bg-2: #1e1e1c;
+  --bg-3: #292927;
+  --bg-4: #363633;
+  --line: rgb(255 255 255 / 8%);
+  --text: #efefea;
+  --muted: #92928a;
+  /* One accent, used flat. Text on it is dark. */
+  --accent: #cdf25c;
+  --accent-ink: #151514;
+  --warn: #f2b84b;
+  --danger: #ff5a4f;
+  --radius: 10px;
+  --radius-l: 14px;
   color-scheme: dark;
   font-family: 'Inter Variable', 'Segoe UI', system-ui, sans-serif;
   font-feature-settings: 'cv11', 'ss03';
@@ -35,11 +33,7 @@ body,
 }
 
 body {
-  /* A fixed glow behind the panels: drawn once, it costs nothing afterwards. */
-  background:
-    radial-gradient(900px 520px at 0% 0%, rgb(139 123 255 / 13%), transparent 62%),
-    radial-gradient(700px 480px at 100% 100%, rgb(208 107 255 / 7%), transparent 60%),
-    var(--bg-0);
+  background: var(--bg-0);
   color: var(--text);
   user-select: none;
   overflow: hidden;
@@ -75,7 +69,7 @@ h2:first-of-type {
 }
 
 a {
-  color: var(--accent-text);
+  color: var(--accent);
 }
 
 .muted {
@@ -123,10 +117,8 @@ a {
 
 .logo,
 .brand {
-  width: 64px;
-  height: 64px;
-  margin: 0 auto 10px;
-  box-shadow: 0 12px 40px rgb(139 123 255 / 45%);
+  border-radius: 30%;
+  background: var(--accent);
 }
 
 .logo {
@@ -137,7 +129,7 @@ a {
 .brand {
   width: 56px;
   height: 56px;
-  margin: 0 auto 6px;
+  margin: 0 auto 10px;
 }
 
 /* ----- Controls ----- */
@@ -170,9 +162,8 @@ textarea:focus-visible {
 }
 
 button.primary {
-  background: var(--gradient);
-  color: #fff;
-  box-shadow: 0 6px 20px rgb(139 123 255 / 30%);
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 button.primary:hover {
@@ -187,7 +178,7 @@ button.danger,
 
 .toggle.on-accent {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-ink);
 }
 
 button.ghost {
@@ -218,7 +209,7 @@ button.with-icon {
   width: 36px;
   height: 36px;
   padding: 0;
-  border-radius: 50%;
+  border-radius: 10px;
   background: none;
   color: var(--muted);
 }
@@ -237,7 +228,7 @@ input:not([type='range']):not([type='checkbox']),
 select,
 textarea {
   padding: 10px 12px;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: 10px;
   background: var(--bg-0);
   color: var(--text);
@@ -319,6 +310,7 @@ input[type='range'] {
 }
 
 .check input:checked::after {
+  background: var(--accent-ink);
   transform: translateX(16px);
 }
 
@@ -368,9 +360,8 @@ button.choice {
   flex-direction: column;
   gap: 4px;
   padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--bg-1);
+  border-radius: var(--radius-l);
+  background: var(--bg-2);
   text-align: left;
   font-weight: 400;
 }
@@ -380,7 +371,6 @@ button.choice strong {
 }
 
 button.choice:hover {
-  border-color: var(--accent);
   background: var(--bg-3);
 }
 
@@ -405,7 +395,6 @@ button.choice:hover {
 .main,
 .userbar,
 .tabs {
-  border: 1px solid var(--line);
   background: var(--bg-1);
 }
 
@@ -420,7 +409,6 @@ button.choice:hover {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background: linear-gradient(180deg, rgb(139 123 255 / 10%), transparent 240px), var(--bg-1);
 }
 
 .side-head {
@@ -459,8 +447,7 @@ button.choice:hover {
 }
 
 .status.connected::before {
-  background: var(--ok);
-  box-shadow: 0 0 8px var(--ok);
+  background: var(--accent);
 }
 
 .status.connecting::before,
@@ -486,8 +473,7 @@ button.choice:hover {
 
 .people > .person,
 .peer {
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--bg-2);
 }
 
@@ -512,8 +498,8 @@ button.choice:hover {
   flex-shrink: 0;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  color: #fff;
+  border-radius: 32%;
+  color: var(--accent-ink);
   font-weight: 700;
   font-size: 16px;
 }
@@ -524,31 +510,30 @@ button.choice:hover {
   font-size: 28px;
 }
 
-/* The halo shows who is talking. It appears at once: an animated one would keep the window drawing. */
+/* A plain ring shows who is talking. It appears at once: an animated one would keep the window drawing. */
 .avatar.speaking {
   box-shadow:
     0 0 0 3px var(--bg-2),
-    0 0 0 6px var(--ok),
-    0 0 28px 6px rgb(61 220 151 / 40%);
+    0 0 0 6px var(--accent);
 }
 
 .hue-0 {
-  background: linear-gradient(135deg, #9a8bff, #5b47e6);
+  background: #ff8a65;
 }
 .hue-1 {
-  background: linear-gradient(135deg, #ff8fb0, #d9457a);
+  background: #f2b84b;
 }
 .hue-2 {
-  background: linear-gradient(135deg, #ffb96b, #e0702c);
+  background: #6fd39a;
 }
 .hue-3 {
-  background: linear-gradient(135deg, #5fe0b8, #1f9c7c);
+  background: #62b8f5;
 }
 .hue-4 {
-  background: linear-gradient(135deg, #73c0ff, #2f78d6);
+  background: #b7a2f7;
 }
 .hue-5 {
-  background: linear-gradient(135deg, #dc93ff, #9a45d6);
+  background: #f590c2;
 }
 
 .who {
@@ -588,9 +573,9 @@ button.choice:hover {
   place-items: center;
   width: 26px;
   height: 26px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--danger) 20%, transparent);
-  color: var(--danger);
+  border-radius: 8px;
+  background: var(--danger);
+  color: #fff;
 }
 
 .flag + .flag {
@@ -657,9 +642,8 @@ button.choice:hover {
   align-items: center;
   gap: 6px;
   padding: 16px 12px;
-  border: 1px dashed color-mix(in srgb, var(--accent) 45%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  border-radius: var(--radius);
+  background: var(--bg-3);
 }
 
 .access-code code,
@@ -673,7 +657,7 @@ input.code-input {
 
 .access-code code {
   margin-right: -0.25em;
-  color: var(--accent-text);
+  color: var(--accent);
 }
 
 input.code-input {
@@ -718,7 +702,7 @@ input.code-input {
   display: flex;
   gap: 4px;
   padding: 4px;
-  border-radius: 14px;
+  border-radius: var(--radius-l);
 }
 
 .tab {
@@ -736,7 +720,7 @@ input.code-input {
 }
 
 .tab.active {
-  background: var(--bg-4);
+  background: var(--bg-3);
   color: var(--text);
 }
 
@@ -778,12 +762,12 @@ input.code-input {
 }
 
 .notice {
-  background: color-mix(in srgb, var(--accent) 18%, var(--bg-1));
+  background: var(--bg-3);
 }
 
 .error {
-  background: color-mix(in srgb, var(--danger) 18%, var(--bg-1));
-  color: #ffc2c6;
+  background: var(--danger);
+  color: #fff;
 }
 
 .main {
@@ -849,10 +833,8 @@ input.code-input {
   max-width: 360px;
   max-height: 100%;
   padding: 18px;
-  border: 1px solid var(--line);
   border-radius: var(--radius-l);
   background: var(--bg-2);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 60%);
 }
 
 .settings {
@@ -955,7 +937,7 @@ input.code-input {
 .threshold-meter .fill,
 .meter > div {
   height: 100%;
-  background: var(--ok);
+  background: var(--accent);
   transform: scaleX(0);
   transform-origin: left;
 }
@@ -1008,7 +990,6 @@ input.code-input {
   inset: 8px;
   border: 2px dashed var(--accent);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
   pointer-events: none;
 }
 
@@ -1059,12 +1040,12 @@ input.code-input {
 .empty-icon {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   margin-bottom: 6px;
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-  color: var(--accent-text);
+  border-radius: 32%;
+  background: var(--bg-3);
+  color: var(--text);
 }
 
 .day {
@@ -1120,22 +1101,22 @@ input.code-input {
 }
 
 .name-0 {
-  color: #b0a6ff;
+  color: #ff8a65;
 }
 .name-1 {
-  color: #ff9db8;
+  color: #f2b84b;
 }
 .name-2 {
-  color: #ffbf7a;
+  color: #6fd39a;
 }
 .name-3 {
-  color: #6fe0c0;
+  color: #62b8f5;
 }
 .name-4 {
-  color: #7fc1ff;
+  color: #b7a2f7;
 }
 .name-5 {
-  color: #dc9bff;
+  color: #f590c2;
 }
 
 .msg-content {
@@ -1160,7 +1141,6 @@ input.code-input {
   position: absolute;
   top: -10px;
   right: 14px;
-  border: 1px solid var(--line);
   background: var(--bg-3);
   opacity: 0;
 }
@@ -1202,9 +1182,8 @@ button.file {
   gap: 12px;
   max-width: min(100%, 400px);
   padding: 12px 14px;
-  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--bg-1);
+  background: var(--bg-2);
   color: var(--muted);
   text-align: left;
 }
@@ -1253,13 +1232,8 @@ button.file strong {
   align-items: flex-end;
   gap: 6px;
   padding: 6px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-l);
   background: var(--bg-2);
-}
-
-.composer-box:focus-within {
-  outline: 1px solid color-mix(in srgb, var(--accent) 60%, transparent);
 }
 
 .composer-box textarea {
@@ -1274,8 +1248,8 @@ button.file strong {
 }
 
 .icon-btn.send:not(:disabled) {
-  background: var(--gradient);
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
 .chips {
@@ -1341,15 +1315,14 @@ button.note {
   width: 100%;
   margin-bottom: 12px;
   padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   text-align: left;
   font-weight: 400;
   break-inside: avoid;
 }
 
 button.note:hover {
-  border-color: rgb(255 255 255 / 28%);
+  filter: brightness(1.12);
 }
 
 .note strong,
@@ -1384,23 +1357,23 @@ button.color-0:hover {
 }
 .color-1,
 button.color-1:hover {
-  background: color-mix(in srgb, #f2557a 20%, var(--bg-2));
+  background: #5a3226;
 }
 .color-2,
 button.color-2:hover {
-  background: color-mix(in srgb, #f0a030 20%, var(--bg-2));
+  background: #574318;
 }
 .color-3,
 button.color-3:hover {
-  background: color-mix(in srgb, #3ddc97 20%, var(--bg-2));
+  background: #254a36;
 }
 .color-4,
 button.color-4:hover {
-  background: color-mix(in srgb, #3fb0f0 20%, var(--bg-2));
+  background: #1f4259;
 }
 .color-5,
 button.color-5:hover {
-  background: color-mix(in srgb, #a070ff 20%, var(--bg-2));
+  background: #3d3466;
 }
 
 .note-editor {
