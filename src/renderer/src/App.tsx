@@ -334,11 +334,11 @@ function Main({ engine, space }: { engine: VoiceEngine; space: Space }) {
             onClick={() => engine.setDeafened(!voice.deafened)}
             aria-pressed={voice.deafened}
             aria-label={voice.deafened ? t('deafened') : t('deafen')}
-            title={voice.deafened ? t('deafened') : t('deafen')}
+            data-tip={voice.deafened ? t('deafened') : t('deafen')}
           >
             <Icon name={voice.deafened ? 'headphonesOff' : 'headphones'} />
           </button>
-          <button className="dock-btn" onClick={() => setShowSettings(true)} aria-label={t('settings')} title={t('settings')}>
+          <button className="dock-btn" onClick={() => setShowSettings(true)} aria-label={t('settings')} data-tip={t('settings')}>
             <Icon name="settings" />
           </button>
         </div>
@@ -500,7 +500,7 @@ function Settings(props: {
           </span>
         </div>
         <div className="settings-body">
-          <button className="icon-btn settings-close" onClick={props.onClose} aria-label={t('close')} title={t('close')}>
+          <button className="icon-btn settings-close" onClick={props.onClose} aria-label={t('close')} data-tip={t('close')} data-tip-pos="bottom" data-tip-align="end">
             <Icon name="close" />
           </button>
 
@@ -607,7 +607,7 @@ function Settings(props: {
                     className={!props.randomFace && faceOf(props.name, props.face) === item ? 'face active' : 'face'}
                     aria-pressed={!props.randomFace && faceOf(props.name, props.face) === item}
                     aria-label={item.name}
-                    title={item.name}
+                    data-tip={item.name}
                     onClick={() => props.onPickFace(pick)}
                   >
                     <Avatar name={props.name} pick={pick} />
@@ -830,11 +830,33 @@ function Storage({ app, onChange }: { app: AppState; onChange: (state: AppState)
   )
 }
 
+/** The code to give to the people who join. Clicking it copies it. */
 function AccessCode({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false)
+  const timer = useRef<number | null>(null)
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current)
+    },
+    []
+  )
+  const copy = (): void => {
+    void navigator.clipboard
+      .writeText(code)
+      .then(() => {
+        setCopied(true)
+        if (timer.current !== null) window.clearTimeout(timer.current)
+        timer.current = window.setTimeout(() => setCopied(false), 1600)
+      })
+      .catch(() => {})
+  }
   return (
     <div className="access-code">
       <span className="muted small">{t('shareCode')}</span>
-      <code>{code}</code>
+      <button className={copied ? 'code copied' : 'code'} onClick={copy} data-tip={copied ? t('copied') : t('copy')}>
+        <code>{code}</code>
+        <Icon name={copied ? 'check' : 'copy'} size={16} />
+      </button>
     </div>
   )
 }
@@ -862,19 +884,19 @@ function Person(props: {
         {props.note && <span className="note">{props.note}</span>}
       </span>
       {props.muted && (
-        <span className="flag" title={t('micOff')}>
+        <span className="flag" data-tip={t('micOff')}>
           <Icon name="micOff" size={16} />
         </span>
       )}
       {props.deafened && (
-        <span className="flag" title={t('soundOff')}>
+        <span className="flag" data-tip={t('soundOff')}>
           <Icon name="headphonesOff" size={16} />
         </span>
       )}
     </>
   )
   return props.onClick ? (
-    <button className="person" aria-expanded={props.open} onClick={props.onClick}>
+    <button className="person" aria-expanded={props.open} onClick={props.onClick} data-tip={props.open ? undefined : t('volume')} data-tip-pos="bottom">
       {content}
     </button>
   ) : (

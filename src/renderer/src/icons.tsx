@@ -49,7 +49,14 @@ const PATHS = {
   send: <path d="M4 12l16-8-6 16-3-7z" />,
   pin: <path d="M12 17v4M8 4h8l-1 6 3 4H6l3-4z" />,
   download: <path d="M12 4v11M7 11l5 5 5-5M5 20h14" />,
-  file: <path d="M7 3h7l4 4v14H7zM14 3v4h4" />
+  file: <path d="M7 3h7l4 4v14H7zM14 3v4h4" />,
+  copy: (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2.5" />
+      <path d="M5 15V6a2 2 0 0 1 2-2h9" />
+    </>
+  ),
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS

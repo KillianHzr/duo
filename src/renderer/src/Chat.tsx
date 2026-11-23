@@ -210,7 +210,7 @@ export function Chat({ space, self, faces }: { space: Space; self: string; faces
                     <button
                       className="msg-action icon-btn"
                       aria-label={t('delete')}
-                      title={t('delete')}
+                      data-tip={t('delete')}
                       onClick={() => setConfirming(message.id)}
                     >
                       <Icon name="trash" size={16} />
@@ -257,7 +257,7 @@ export function Chat({ space, self, faces }: { space: Space; self: string; faces
           </div>
         )}
         <div className="composer-box">
-          <button type="button" className="icon-btn" aria-label={t('attach')} title={t('attach')} onClick={() => picker.current?.click()}>
+          <button type="button" className="icon-btn" aria-label={t('attach')} data-tip={t('attach')} data-tip-align="start" onClick={() => picker.current?.click()}>
             <Icon name="plus" />
           </button>
           <textarea
@@ -275,7 +275,8 @@ export function Chat({ space, self, faces }: { space: Space; self: string; faces
             className="icon-btn send"
             type="submit"
             aria-label={t('send')}
-            title={t('send')}
+            data-tip={t('send')}
+            data-tip-align="end"
             disabled={!chat.available || (!text.trim() && !files.length)}
           >
             <Icon name="send" />

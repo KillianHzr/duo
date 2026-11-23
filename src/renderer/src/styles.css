@@ -145,10 +145,6 @@ button {
   font: inherit;
   font-weight: 700;
   cursor: pointer;
-  transition:
-    background-color 0.12s,
-    color 0.12s,
-    border-color 0.12s;
 }
 
 button:hover {
@@ -331,6 +327,114 @@ input[type='range'] {
 
 .field > * {
   font-size: 14px;
+}
+
+/* Every button gives a little under the finger. */
+button {
+  transition:
+    background-color 0.12s,
+    color 0.12s,
+    filter 0.12s,
+    transform 0.08s;
+}
+
+button:active {
+  transform: scale(0.96);
+}
+
+.seat button:active,
+button.note:active,
+button.choice:active {
+  transform: scale(0.985);
+}
+
+/* Tooltips: what a control does, shown a moment after the pointer rests on it. */
+:where([data-tip]) {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 20;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: #0e0f11;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 4px);
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.35s;
+}
+
+[data-tip][data-tip-pos='bottom']::after {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+[data-tip][data-tip-align='end']::after {
+  right: 0;
+  left: auto;
+  transform: translate(0, 4px);
+}
+
+[data-tip][data-tip-align='start']::after {
+  left: 0;
+  transform: translate(0, 4px);
+}
+
+[data-tip][data-tip-align='start']:hover::after,
+[data-tip][data-tip-align='start']:focus-visible::after,
+[data-tip][data-tip-align='end']:hover::after,
+[data-tip][data-tip-align='end']:focus-visible::after {
+  transform: translate(0, 0);
+}
+
+/* What opens arrives with a short, soft movement. */
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.dialog,
+.popover {
+  animation: arrive 0.16s ease-out;
+}
+
+.overlay {
+  animation: fade-in 0.16s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 /* ----- First screens ----- */
@@ -662,15 +766,40 @@ input.code-input {
   font-family: 'Cascadia Mono', Consolas, monospace;
   font-weight: 600;
   letter-spacing: 0.2em;
-  user-select: text;
 }
 
-.access-code code {
-  padding: 4px 6px 4px 12px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-ink);
+/* The code is a button of its own kind: an outline that firms up under the pointer, then
+   confirms the copy. It never fills like the call controls do. */
+button.code {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px 7px 16px;
+  border-radius: 10px;
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--bg-4);
+  color: var(--muted);
+  cursor: copy;
+  transition:
+    box-shadow 0.12s,
+    color 0.12s,
+    transform 0.08s;
+}
+
+button.code code {
+  color: var(--text);
   font-size: 18px;
+}
+
+button.code:hover {
+  background: none;
+  box-shadow: inset 0 0 0 1.5px var(--text);
+  color: var(--text);
+}
+
+button.code.copied {
+  box-shadow: inset 0 0 0 1.5px var(--ok);
+  color: var(--ok);
 }
 
 .settings-body .access-code {
@@ -1363,6 +1492,7 @@ button.note {
 
 button.note:hover {
   filter: brightness(1.12);
+  transform: translateY(-1px);
 }
 
 .note strong,

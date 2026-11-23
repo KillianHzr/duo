@@ -137,7 +137,9 @@ const en = {
   micOn: 'Mic on',
   together: 'Together for {time}',
   yourFace: 'Your character',
-  randomFace: 'A different one every time'
+  randomFace: 'A different one every time',
+  copy: 'Copy',
+  copied: 'Copied'
 }
 
 const fr: typeof en = {
@@ -279,7 +281,9 @@ const fr: typeof en = {
   micOn: 'Micro ouvert',
   together: 'Ensemble depuis {time}',
   yourFace: 'Ton personnage',
-  randomFace: 'Un différent à chaque fois'
+  randomFace: 'Un différent à chaque fois',
+  copy: 'Copier',
+  copied: 'Copié'
 }
 
 export type MessageKey = keyof typeof en
