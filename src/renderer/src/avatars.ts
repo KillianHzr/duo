@@ -15,9 +15,6 @@ const eyes = (x1: number, x2: number, y: number, rx = 4.2, ry = 5.2): string =>
 const sleepyEyes = (x1: number, x2: number, y: number, r = 7): string =>
   [x1, x2].map((x) => `<path d="M${x - r} ${y} A${r} ${r} 0 0 0 ${x + r} ${y} Z" fill="${INK}"/>`).join('')
 
-const smile = (x: number, y: number, w = 6): string =>
-  `<path d="M${x - w} ${y} Q${x} ${y + 5} ${x + w} ${y}" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`
-
 export interface Face {
   name: string
   /** SVG markup, without the outer <svg>. */
@@ -27,7 +24,7 @@ export interface Face {
 export const FACES: Face[] = [
   {
     name: 'Braise',
-    art: `<path d="M50 8 C58 22 78 34 78 58 C78 76 66 88 50 88 C34 88 22 76 22 58 C22 46 28 38 34 32 C36 40 40 42 44 40 C40 28 44 16 50 8 Z" fill="#f0795a"/><path d="M50 41 C56 49 66 55 66 67 C66 77 59 84 50 84 C41 84 34 77 34 67 C34 61 37 57 40 54 C42 58 45 58 46 56 C45 50 47 45 50 41 Z" fill="#ffb27a"/>${eyes(44, 56, 66, 3.6, 4.6)}${smile(50, 74, 4)}`
+    art: `<path d="M50 8 C58 22 78 34 78 58 C78 76 66 88 50 88 C34 88 22 76 22 58 C22 46 28 38 34 32 C36 40 40 42 44 40 C40 28 44 16 50 8 Z" fill="#f0795a"/><path d="M50 41 C56 49 66 55 66 67 C66 77 59 84 50 84 C41 84 34 77 34 67 C34 61 37 57 40 54 C42 58 45 58 46 56 C45 50 47 45 50 41 Z" fill="#ffb27a"/><ellipse cx="44" cy="66" rx="3.6" ry="4.6" fill="${INK}"/><path d="M52.4 67 Q56 62 59.6 67" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M46 74 Q51 78 55 73" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`
   },
   {
     name: 'Caillou',
@@ -47,7 +44,7 @@ export const FACES: Face[] = [
   },
   {
     name: 'Chapeau',
-    art: `<rect x="35" y="46" width="30" height="38" rx="13" fill="${CREAM}"/><g transform="rotate(-8 50 44)"><path d="M13 50 Q13 16 50 16 Q87 16 87 50 Q87 55 82 55 H18 Q13 55 13 50 Z" fill="#c9747f"/><circle cx="80" cy="54" r="6" fill="${DISC}"/></g>${eyes(44, 56, 66, 3.4, 4.4)}${smile(50, 74, 4)}`
+    art: `<rect x="35" y="46" width="30" height="38" rx="13" fill="${CREAM}"/><g transform="rotate(-8 50 44)"><path d="M13 50 Q13 16 50 16 Q87 16 87 50 Q87 55 82 55 H18 Q13 55 13 50 Z" fill="#c9747f"/><circle cx="80" cy="54" r="6" fill="${DISC}"/></g><path d="M40.4 67 Q44 62 47.6 67" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><path d="M52.4 67 Q56 62 59.6 67" fill="none" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`
   },
   {
     name: 'Mousse',
@@ -55,7 +52,7 @@ export const FACES: Face[] = [
   },
   {
     name: 'Fanal',
-    art: `<g transform="rotate(9 50 22)"><path d="M38 23 C36 5 62 5 62 23" fill="none" stroke="#e39a5c" stroke-width="4.5" stroke-linecap="round"/></g><rect x="30" y="20" width="40" height="10" rx="5" fill="#e39a5c"/><rect x="23" y="27" width="54" height="52" rx="14" fill="#e39a5c"/><rect x="30" y="34" width="40" height="38" rx="9" fill="#f6dcae"/><rect x="28" y="77" width="44" height="9" rx="4.5" fill="#c97f45"/>${eyes(43, 57, 50, 3.8, 4.8)}${smile(50, 59, 5)}`
+    art: `<g transform="rotate(9 50 22)"><path d="M38 23 C36 5 62 5 62 23" fill="none" stroke="#e39a5c" stroke-width="4.5" stroke-linecap="round"/></g><rect x="30" y="20" width="40" height="10" rx="5" fill="#e39a5c"/><rect x="23" y="27" width="54" height="52" rx="14" fill="#e39a5c"/><rect x="30" y="34" width="40" height="38" rx="9" fill="#f6dcae"/><rect x="28" y="77" width="44" height="9" rx="4.5" fill="#c97f45"/><circle cx="43" cy="50" r="4.5" fill="${INK}"/><circle cx="57" cy="50" r="4.5" fill="${INK}"/><circle cx="50" cy="61" r="2.8" fill="${INK}"/>`
   },
   {
     name: 'Quart',
