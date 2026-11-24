@@ -1208,6 +1208,8 @@ input.code-input {
 .day {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 12px;
   margin-top: 18px;
   margin-bottom: 6px;
 }
