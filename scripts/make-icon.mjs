@@ -1,93 +1,67 @@
 /**
- * Draws the app icon (two overlapping speech circles) and writes it in every size the
- * installers need: build/icon.png, plus the tile images of the Microsoft Store package.
- * Pure Node, no image library: run `npm run icon` after changing the design.
+ * Draws the app icon — Mousse, the moss character, dozing — and writes it in every size the
+ * app and its installers need: build/icon.png, the image the window and the tray use, and the
+ * images of the Microsoft Store package. Run `npm run icon` after changing the design.
  */
-import { deflateSync } from 'node:zlib'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { Resvg } from '@resvg/resvg-js'
 
-/** The design is drawn on a 512-unit square, then scaled and centered into the image. */
-const DESIGN = 512
-const SHAPES = [
-  { cx: 255.5, cy: 255.5, r: 250, color: [0x16, 0x17, 0x1d], alpha: 1 }, // dark backdrop
-  { cx: 200, cy: 255.5, r: 120, color: [0x58, 0x65, 0xf2], alpha: 1 }, // left circle
-  { cx: 312, cy: 255.5, r: 120, color: [0x3b, 0xa5, 0x5d], alpha: 0.88 } // right circle
-]
+const INK = '#1c1d20'
+const CREAM = '#f3ead9'
+const BODY = '#6e916d'
+const MOSS = '#93b38b'
 
-function render(width, height) {
-  const pixels = Buffer.alloc(width * height * 4)
-  const scale = Math.min(width, height) / DESIGN
-  const offsetX = (width - DESIGN * scale) / 2
-  const offsetY = (height - DESIGN * scale) / 2
+const eye = (x) => `<path d="M${x - 11} 63 A11 11 0 0 0 ${x + 11} 63" fill="none" stroke="${INK}" stroke-width="6.5" stroke-linecap="round"/>`
+const daisy = `<g fill="${CREAM}"><circle cx="76" cy="12" r="6.6"/><circle cx="67.8" cy="18" r="6.6"/><circle cx="70.9" cy="27.6" r="6.6"/><circle cx="81.1" cy="27.6" r="6.6"/><circle cx="84.2" cy="18" r="6.6"/></g><circle cx="76" cy="20.5" r="5.4" fill="#f2b866"/>`
 
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = (y * width + x) * 4
-      for (const shape of SHAPES) {
-        const distance = Math.hypot(x - (offsetX + shape.cx * scale), y - (offsetY + shape.cy * scale))
-        // Coverage of the disc at this pixel, with a one-pixel soft edge.
-        const alpha = Math.max(0, Math.min(1, shape.r * scale - distance + 0.5)) * shape.alpha
-        const under = pixels[i + 3] / 255
-        const out = alpha + under * (1 - alpha)
-        if (out === 0) continue
-        for (let c = 0; c < 3; c++) {
-          pixels[i + c] = Math.round((shape.color[c] * alpha + pixels[i + c] * under * (1 - alpha)) / out)
-        }
-        pixels[i + 3] = Math.round(out * 255)
-      }
-    }
-  }
-  return encodePng(pixels, width, height)
+/** The face on a 100×100 canvas. Below 24 px the daisy is only noise, so it is left out. */
+const face = (size) =>
+  `<defs><clipPath id="tile"><rect width="100" height="100" rx="24"/></clipPath></defs>` +
+  `<g clip-path="url(#tile)"><rect width="100" height="100" fill="${BODY}"/>` +
+  `<path d="M-2 -2 H102 V44 Q88 29 75 42 Q63 54 50 42 Q37 30 25 42 Q12 54 -2 44 Z" fill="${MOSS}"/>` +
+  `${eye(34)}${eye(66)}${size >= 24 ? daisy : ''}</g>`
+
+function png(svg, width) {
+  return new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng()
 }
 
-const crcTable = Array.from({ length: 256 }, (_, n) => {
-  let c = n
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
-  return c >>> 0
-})
-const crc32 = (buf) => {
-  let c = 0xffffffff
-  for (const byte of buf) c = crcTable[(c ^ byte) & 0xff] ^ (c >>> 8)
-  return (c ^ 0xffffffff) >>> 0
+/** The icon alone, on a transparent ground. */
+const square = (size) => png(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">${face(size)}</svg>`, size)
+
+/** The icon centred on a wide dark ground, for the Store's wide tile. */
+const wide = (width, height) => {
+  const side = height * 0.7
+  return png(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}"><rect width="${width}" height="${height}" fill="${INK}"/>` +
+      `<svg x="${(width - side) / 2}" y="${(height - side) / 2}" width="${side}" height="${side}" viewBox="0 0 100 100">${face(side)}</svg></svg>`,
+    width
+  )
 }
-const chunk = (type, data) => {
-  const head = Buffer.alloc(4)
-  head.writeUInt32BE(data.length)
-  const body = Buffer.concat([Buffer.from(type), data])
-  const tail = Buffer.alloc(4)
-  tail.writeUInt32BE(crc32(body))
-  return Buffer.concat([head, body, tail])
-}
-
-function encodePng(pixels, width, height) {
-  const header = Buffer.alloc(13)
-  header.writeUInt32BE(width, 0)
-  header.writeUInt32BE(height, 4)
-  header.set([8, 6, 0, 0, 0], 8) // 8-bit RGBA
-
-  const stride = width * 4 + 1
-  const rows = Buffer.alloc(height * stride)
-  for (let y = 0; y < height; y++) pixels.copy(rows, y * stride + 1, y * width * 4, (y + 1) * width * 4)
-
-  return Buffer.concat([
-    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-    chunk('IHDR', header),
-    chunk('IDAT', deflateSync(rows, { level: 9 })),
-    chunk('IEND', Buffer.alloc(0))
-  ])
-}
-
-const outputs = [
-  ['build/icon.png', 512, 512],
-  // File names expected by the Microsoft Store package (appx) builder.
-  ['build/appx/StoreLogo.png', 50, 50],
-  ['build/appx/Square44x44Logo.png', 44, 44],
-  ['build/appx/Square150x150Logo.png', 150, 150],
-  ['build/appx/Wide310x150Logo.png', 310, 150]
-]
 
 mkdirSync('build/appx', { recursive: true })
-for (const [file, width, height] of outputs) {
-  writeFileSync(file, render(width, height))
-  console.log(`${file} (${width}x${height})`)
+// Start from a clean folder: a size dropped from the lists below must not linger in the package.
+for (const file of readdirSync('build/appx')) rmSync(`build/appx/${file}`)
+
+const files = [
+  ['build/icon.png', square(512)],
+  // Loaded by the app itself, for its window and its tray icon.
+  ['build/app-icon.png', square(256)]
+]
+
+// Names the Microsoft Store package builder expects, at the scales Windows asks for.
+for (const [scale, factor] of [[100, 1], [200, 2], [400, 4]]) {
+  const suffix = scale === 100 ? '' : `.scale-${scale}`
+  files.push([`build/appx/StoreLogo${suffix}.png`, square(50 * factor)])
+  files.push([`build/appx/Square44x44Logo${suffix}.png`, square(44 * factor)])
+  files.push([`build/appx/Square150x150Logo${suffix}.png`, square(150 * factor)])
+  files.push([`build/appx/Wide310x150Logo${suffix}.png`, wide(310 * factor, 150 * factor)])
 }
+// Exact sizes for the taskbar and Start. The "unplated" ones stop Windows drawing its own plate behind the icon.
+for (const size of [16, 24, 32, 48, 256]) {
+  for (const form of ['', '_altform-unplated', '_altform-lightunplated']) {
+    files.push([`build/appx/Square44x44Logo.targetsize-${size}${form}.png`, square(size)])
+  }
+}
+
+for (const [file, data] of files) writeFileSync(file, data)
+console.log(`${files.length} images written`)

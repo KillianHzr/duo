@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, session, shell, Tray } from 'electron'
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import iconPath from '../../build/app-icon.png?asset'
 import { moveData, runBackup } from './backup'
 import { discoverServers } from './discovery'
 import { setPushToTalk, stopPushToTalk } from './ptt'
@@ -163,22 +164,9 @@ async function stopHosting(): Promise<void> {
   hostError = null
 }
 
-/** Round icon drawn in memory, so the tray needs no image file. */
+/** The app icon at a given size, for the window and the tray. */
 function makeIcon(size: number): Electron.NativeImage {
-  const buffer = Buffer.alloc(size * size * 4)
-  const center = (size - 1) / 2
-  const radius = size / 2 - 1
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const alpha = Math.max(0, Math.min(1, radius - Math.hypot(x - center, y - center) + 0.5))
-      const i = (y * size + x) * 4
-      buffer[i] = 0xf2 // B
-      buffer[i + 1] = 0x65 // G
-      buffer[i + 2] = 0x58 // R
-      buffer[i + 3] = Math.round(alpha * 255)
-    }
-  }
-  return nativeImage.createFromBitmap(buffer, { width: size, height: size })
+  return nativeImage.createFromPath(iconPath).resize({ width: size, height: size, quality: 'best' })
 }
 
 function showWindow(): void {
