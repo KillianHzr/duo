@@ -59,11 +59,11 @@ export const FACES: Face[] = [
   },
   {
     name: 'Quart',
-    art: `<path d="M46 22 C41 16 51 14 46 7" fill="none" stroke="${CREAM}" stroke-width="3.5" stroke-linecap="round"/><path d="M68 45 C86 45 86 67 68 67" fill="none" stroke="#5fb3a8" stroke-width="7" stroke-linecap="round"/><rect x="23" y="33" width="46" height="46" rx="9" fill="#5fb3a8"/><rect x="21" y="28" width="50" height="10" rx="5" fill="${CREAM}"/><circle cx="30" cy="30" r="3.6" fill="${INK}"/>${eyes(38, 54, 56)}`
+    art: `<path d="M46 22 C41 16 51 14 46 7" fill="none" stroke="${CREAM}" stroke-width="3.5" stroke-linecap="round"/><path d="M68 45 C86 45 86 67 68 67" fill="none" stroke="#5fb3a8" stroke-width="7" stroke-linecap="round"/><rect x="23" y="33" width="46" height="46" rx="9" fill="#5fb3a8"/><rect x="21" y="28" width="50" height="10" rx="5" fill="${CREAM}"/><g fill="${CREAM}"><circle cx="30" cy="46" r="1.7"/><circle cx="62" cy="48" r="1.7"/><circle cx="59" cy="70" r="1.7"/><circle cx="31" cy="71" r="1.7"/><circle cx="46" cy="44" r="1.4"/><circle cx="46" cy="72" r="1.4"/></g>${eyes(38, 54, 56)}`
   },
   {
     name: 'Piquant',
-    art: `<g fill="#9a86c9" stroke="#9a86c9" stroke-width="5" stroke-linejoin="round"><path d="M10.5 43.7 L29.6 45.3 L26.2 54.7 Z"/><path d="M23 25.8 L38.7 36.8 L31.1 43.2 Z"/><path d="M42.7 16.6 L50.8 34 L41 35.8 Z"/><path d="M64.4 18.5 L62.7 37.6 L53.3 34.2 Z"/><path d="M82.2 31 L71.2 46.7 L64.8 39.1 Z"/><path d="M91.4 50.7 L74 58.8 L72.2 49 Z"/></g><circle cx="50" cy="58" r="27" fill="#9a86c9"/><ellipse cx="45" cy="65" rx="18" ry="15" fill="${CREAM}"/><ellipse cx="68" cy="19" rx="7" ry="4" transform="rotate(-30 68 19)" fill="#8fa58c"/>${eyes(38, 51, 62, 3.6, 4.6)}<circle cx="44.5" cy="70" r="2.6" fill="${INK}"/>`
+    art: `<g fill="#9a86c9" stroke="#9a86c9" stroke-width="5" stroke-linejoin="round"><path d="M10.5 43.7 L29.6 45.3 L26.2 54.7 Z"/><path d="M23 25.8 L38.7 36.8 L31.1 43.2 Z"/><path d="M42.7 16.6 L50.8 34 L41 35.8 Z"/><path d="M64.4 18.5 L62.7 37.6 L53.3 34.2 Z"/><path d="M82.2 31 L71.2 46.7 L64.8 39.1 Z"/><path d="M91.4 50.7 L74 58.8 L72.2 49 Z"/></g><circle cx="50" cy="58" r="27" fill="#9a86c9"/><ellipse cx="45" cy="65" rx="18" ry="15" fill="${CREAM}"/><path d="M59 25 C58 13 68 8 80 9 C80 20 71 28 59 25 Z" fill="#8fa58c"/><path d="M61 23.5 L76 12" stroke="#6f8a6a" stroke-width="2" stroke-linecap="round"/>${eyes(38, 51, 62, 3.6, 4.6)}<circle cx="44.5" cy="70" r="2.6" fill="${INK}"/>`
   }
 ].map((face) => ({ ...face, art: `<rect width="100" height="100" fill="${DISC}"/>${face.art}` }))
 
