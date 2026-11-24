@@ -51,7 +51,7 @@ export const FACES: Face[] = [
   },
   {
     name: 'Mousse',
-    art: `<path d="M15 78 Q15 40 50 40 Q85 40 85 78 Q85 83 80 83 H20 Q15 83 15 78 Z" fill="#8fa58c"/><path d="M17 62 Q15 37 50 35 Q85 37 83 62 Q75 53 66 60 Q58 67 50 59 Q42 52 34 60 Q25 67 17 62 Z" fill="#b7c9a8"/><circle cx="62" cy="31" r="5.5" fill="#f0795a"/><circle cx="62" cy="31" r="2" fill="${CREAM}"/>${sleepyEyes(40, 60, 70, 6)}`
+    art: `<path d="M15 78 Q15 40 50 40 Q85 40 85 78 Q85 83 80 83 H20 Q15 83 15 78 Z" fill="#8fa58c"/><path d="M17 62 Q15 37 50 35 Q85 37 83 62 Q75 53 66 60 Q58 67 50 59 Q42 52 34 60 Q25 67 17 62 Z" fill="#b7c9a8"/><path d="M62 40 V28" stroke="#6f8a6a" stroke-width="3" stroke-linecap="round"/><g fill="${CREAM}"><circle cx="62" cy="16.5" r="4.4"/><circle cx="56.8" cy="20.3" r="4.4"/><circle cx="58.8" cy="26.4" r="4.4"/><circle cx="65.2" cy="26.4" r="4.4"/><circle cx="67.2" cy="20.3" r="4.4"/></g><circle cx="62" cy="22" r="3.4" fill="#f2b866"/>${sleepyEyes(40, 60, 70, 6)}`
   },
   {
     name: 'Fanal',
