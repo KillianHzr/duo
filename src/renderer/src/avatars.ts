@@ -56,7 +56,7 @@ export const FACES: Face[] = [
   },
   {
     name: 'Quart',
-    art: `<path d="M46 22 C41 16 51 14 46 7" fill="none" stroke="${CREAM}" stroke-width="3.5" stroke-linecap="round"/><path d="M68 45 C86 45 86 67 68 67" fill="none" stroke="#5fb3a8" stroke-width="7" stroke-linecap="round"/><rect x="23" y="33" width="46" height="46" rx="9" fill="#5fb3a8"/><rect x="21" y="28" width="50" height="10" rx="5" fill="${CREAM}"/>${eyes(38, 54, 56)}`
+    art: `<path d="M46 22 C41 16 51 14 46 7" fill="none" stroke="${CREAM}" stroke-width="3.5" stroke-linecap="round"/><path d="M68 45 C86 45 86 67 68 67" fill="none" stroke="#5fb3a8" stroke-width="7" stroke-linecap="round"/><rect x="23" y="33" width="46" height="46" rx="9" fill="#5fb3a8"/><rect x="21" y="28" width="50" height="10" rx="5" fill="${CREAM}"/>${eyes(38, 54, 56)}<path d="M40 65 Q43 69.5 46 65 Q49 69.5 52 65" fill="none" stroke="${INK}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>`
   },
   {
     name: 'Piquant',
