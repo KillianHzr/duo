@@ -1,4 +1,7 @@
-/** TCP (WebSocket) and UDP (discovery) port of a Duo server on the local network. */
+/**
+ * TCP (WebSocket) and UDP (discovery) port of a server on the local network.
+ * On the wire the app still answers to its first name, Duo, so older installs keep finding it.
+ */
 export const DUO_PORT = 47800
 export const DISCOVERY_REQUEST = 'DUO_DISCOVER_V1'
 /** Bumped whenever client and server stop being compatible. */

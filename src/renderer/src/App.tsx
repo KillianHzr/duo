@@ -39,7 +39,7 @@ export function App({ engine, space }: { engine: VoiceEngine; space: Space }) {
     <>
       <div className="titlebar">
         <span className="logo" />
-        Duo
+        Peinard
       </div>
       <Main engine={engine} space={space} />
       <ClosePrompt />

@@ -1,9 +1,9 @@
 # Privacy policy
 
-Duo is a voice chat app for people on the same local network. It is built so that your
+Peinard is a voice chat app for people on the same local network. It is built so that your
 conversations and your data stay on your own computers.
 
-## What Duo does not do
+## What Peinard does not do
 
 - It has no account, no sign-up and no advertising.
 - It collects no personal data, no usage statistics and no crash reports.
@@ -27,7 +27,7 @@ The hosting computer only accepts connections from local-network addresses.
 ## What is stored on your computer
 
 Your first name, your audio settings, whether you host or join, and the access code. They are kept
-in the app's data folder on your computer and are removed when you uninstall Duo.
+in the app's data folder on your computer and are removed when you uninstall Peinard.
 
 ## Connections to the Internet
 
@@ -37,17 +37,17 @@ in the app's data folder on your computer and are removed when you uninstall Duo
 - **Microsoft Store version:** updates are handled by the Microsoft Store; the app itself makes no
   Internet connection.
 
-Duo is not designed to make any other connection to the Internet.
+Peinard is not designed to make any other connection to the Internet.
 
 ## Microphone
 
-Duo uses your microphone only while the app is connected to a call, and only to send your voice to
+Peinard uses your microphone only while the app is connected to a call, and only to send your voice to
 the other people in that call.
 
 ## Push to talk
 
-If you turn on push to talk, Duo watches the one key or mouse button you chose, system-wide, to know
-when you hold it. It does not record or send what you type. With push to talk off, Duo does not
+If you turn on push to talk, Peinard watches the one key or mouse button you chose, system-wide, to know
+when you hold it. It does not record or send what you type. With push to talk off, Peinard does not
 watch the keyboard or the mouse.
 
 ## Contact

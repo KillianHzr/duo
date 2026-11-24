@@ -18,7 +18,7 @@ export interface E2EConfig {
 }
 
 const api = {
-  /** WebSocket URLs of the Duo servers found on the local network. */
+  /** WebSocket URLs of the Peinard servers found on the local network. */
   discover: (): Promise<string[]> => ipcRenderer.invoke('duo:discover'),
   getState: (): Promise<AppState> => ipcRenderer.invoke('duo:state'),
   /** Runs the server inside this app and returns the access code to share. */

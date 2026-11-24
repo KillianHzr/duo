@@ -1,5 +1,5 @@
 {
-  "name": "duo",
+  "name": "peinard",
   "version": "0.4.1",
   "private": true,
   "description": "Low-latency private voice chat for your local network",
@@ -27,9 +27,9 @@
     "dist:store": "electron-vite build && electron-builder --win appx --publish never"
   },
   "build": {
-    "appId": "io.github.killianhzr.duo",
-    "productName": "Duo",
-    "artifactName": "Duo-${version}-${os}-${arch}.${ext}",
+    "appId": "io.github.killianhzr.peinard",
+    "productName": "Peinard",
+    "artifactName": "Peinard-${version}-${os}-${arch}.${ext}",
     "directories": {
       "output": "dist",
       "buildResources": "build"
@@ -62,17 +62,17 @@
       "category": "Network"
     },
     "appx": {
-      "identityName": "KillianHzr.Duo",
-      "publisher": "CN=REPLACE-WITH-PARTNER-CENTER-PUBLISHER-ID",
+      "identityName": "KillianHzr.Peinard",
+      "publisher": "CN=BC1E0133-4A9D-4472-8E42-79655007027C",
       "publisherDisplayName": "KillianHzr",
-      "applicationId": "Duo",
-      "displayName": "Duo",
+      "applicationId": "Peinard",
+      "displayName": "Peinard",
       "addAutoLaunchExtension": true,
       "languages": [
         "en-US",
         "fr-FR"
       ],
-      "backgroundColor": "#16171d"
+      "backgroundColor": "#1c1d20"
     }
   },
   "dependencies": {

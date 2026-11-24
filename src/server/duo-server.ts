@@ -1,5 +1,5 @@
 /**
- * Duo server: introduces clients to each other on the local network.
+ * The server: introduces clients to each other on the local network.
  * Audio never goes through it — it flows directly between clients over WebRTC.
  * Used both by the desktop app ("host" mode) and by the standalone CLI in /server.
  */
@@ -468,7 +468,7 @@ export function startDuoServer(options: DuoServerOptions): Promise<DuoServer> {
     })
     http.listen(port, host, () => {
       discovery.bind(port, host)
-      log(`Duo server ready on port ${port} (local network only)`)
+      log(`Peinard server ready on port ${port} (local network only)`)
       resolve({ port, close })
     })
   })

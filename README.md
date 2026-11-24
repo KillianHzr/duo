@@ -1,8 +1,8 @@
-# Duo
+# Peinard
 
 Low-latency private voice chat for people on the same local network.
 
-Duo is for when you sit in the same home (or office) and voice chat through the Internet adds a delay
+Peinard is for when you sit in the same home (or office) and voice chat through the Internet adds a delay
 you can hear. One computer hosts, the others join with a code, and the audio flows **directly** between
 the computers — it never leaves your network.
 
@@ -26,9 +26,9 @@ the computers — it never leaves your network.
 
 Download the latest installer from the [Releases page](https://github.com/KillianHzr/duo/releases/latest):
 
-- **Windows**: `Duo-<version>-win-x64.exe`. The app is not code-signed yet, so Windows SmartScreen shows a
+- **Windows**: `Peinard-<version>-win-x64.exe`. The app is not code-signed yet, so Windows SmartScreen shows a
   warning: choose *More info → Run anyway*.
-- **Linux**: `Duo-<version>-linux-x86_64.AppImage`. Make it executable, then run it.
+- **Linux**: `Peinard-<version>-linux-x86_64.AppImage`. Make it executable, then run it.
 
 On Windows 11 computers where **Smart App Control** is on, Windows blocks unsigned apps, including this
 installer and its updates, and offers no per-app exception. A Microsoft Store version, which Windows
@@ -36,10 +36,10 @@ trusts, is in preparation.
 
 ## Use
 
-1. On the computer that stays on, open Duo and choose **Host on this computer**. Duo shows a 6-character
-   access code. The first time, your firewall asks whether Duo may accept connections: allow it on
+1. On the computer that stays on, open Peinard and choose **Host on this computer**. Peinard shows a 6-character
+   access code. The first time, your firewall asks whether Peinard may accept connections: allow it on
    private networks.
-2. On the other computers, open Duo, choose **Join someone** and type the code. Duo finds the host by
+2. On the other computers, open Peinard, choose **Join someone** and type the code. Peinard finds the host by
    itself; if it does not, type the host's address (for example `192.168.1.16`).
 
 Wired headsets (or 2.4 GHz dongles) keep the delay low; Bluetooth headsets add 150–250 ms on their own.
@@ -50,7 +50,7 @@ Wired headsets (or 2.4 GHz dongles) keep the delay low; Bluetooth headsets add 1
 ```
  host computer                      other computer
 ┌───────────────────────┐          ┌───────────────────────┐
-│ Duo app               │  signal  │ Duo app               │
+│ Peinard app           │  signal  │ Peinard app           │
 │  ├─ server (ws + udp) │◄────────►│                       │
 │  └─ voice engine      │◄════════►│  └─ voice engine      │
 └───────────────────────┘  audio   └───────────────────────┘
@@ -83,7 +83,7 @@ Releases are built by GitHub Actions when a `v*` tag is pushed.
 
 ## Privacy
 
-Duo collects nothing; your voice, messages, files and notes never leave your network. See the [privacy policy](PRIVACY.md).
+Peinard collects nothing; your voice, messages, files and notes never leave your network. See the [privacy policy](PRIVACY.md).
 
 ## License
 

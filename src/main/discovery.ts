@@ -19,7 +19,7 @@ function broadcastAddresses(): string[] {
 const FIRST_REPLY_GRACE_MS = 60
 
 /**
- * Looks for Duo servers on the local network with a UDP broadcast.
+ * Looks for Peinard servers on the local network with a UDP broadcast.
  * Returns their WebSocket URLs, this machine first.
  */
 export function discoverServers(timeoutMs = 700): Promise<string[]> {

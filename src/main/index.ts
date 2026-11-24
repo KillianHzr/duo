@@ -1,5 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeImage, screen, session, shell, Tray } from 'electron'
-import { mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { moveData, runBackup } from './backup'
 import { discoverServers } from './discovery'
@@ -73,6 +73,30 @@ export interface AppState {
   backupDir: string
   lastBackup: BackupResult | null
 }
+
+/**
+ * The app used to be called Duo. On the first start under its new name, bring over what it kept
+ * there: settings, access code, window choices. Messages, notes and files are not copied (they can
+ * be large): the app keeps using them where they are.
+ */
+function adoptOldData(): void {
+  try {
+    const current = app.getPath('userData')
+    const old = join(app.getPath('appData'), 'duo')
+    if (existsSync(join(current, 'config.json')) || !existsSync(join(old, 'config.json'))) return
+    const skip = /[\\/](data|Cache|Code Cache|GPUCache|DawnCache|DawnGraphiteCache|DawnWebGPUCache|blob_storage|Crashpad|logs|lockfile|Singleton\w*|update-attempts\.json)$/i
+    cpSync(old, current, { recursive: true, filter: (source) => !skip.test(source) })
+    const file = join(current, 'config.json')
+    const saved = JSON.parse(readFileSync(file, 'utf8')) as { dataDir?: string }
+    if (!saved.dataDir && existsSync(join(old, 'data'))) {
+      writeFileSync(file, JSON.stringify({ ...saved, dataDir: join(old, 'data') }, null, 2))
+    }
+  } catch {
+    /* nothing to bring over, or no access: start fresh */
+  }
+}
+
+if (!e2e) adoptOldData()
 
 const dataDir = (): string => config.dataDir || join(app.getPath('userData'), 'data')
 
@@ -178,7 +202,7 @@ function createWindow(): void {
     minWidth: 380,
     minHeight: 520,
     show: false,
-    title: 'Duo',
+    title: 'Peinard',
     icon: makeIcon(64),
     skipTaskbar: Boolean(e2e?.ui),
     focusable: !e2e?.ui,
@@ -247,11 +271,11 @@ function createWindow(): void {
 
 function createTray(): void {
   tray = new Tray(makeIcon(32))
-  tray.setToolTip('Duo')
+  tray.setToolTip('Peinard')
   const french = app.getLocale().startsWith('fr')
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: french ? 'Ouvrir Duo' : 'Open Duo', click: showWindow },
+      { label: french ? 'Ouvrir Peinard' : 'Open Peinard', click: showWindow },
       { type: 'separator' },
       { label: french ? 'Quitter' : 'Quit', click: quit }
     ])

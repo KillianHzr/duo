@@ -6,7 +6,7 @@
 import { copyFile, mkdir, readdir, stat } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 
-export const BACKUP_FOLDER = 'Duo backup'
+export const BACKUP_FOLDER = 'Peinard backup'
 
 const within = (child: string, parent: string): boolean => {
   const path = relative(resolve(parent), resolve(child))
