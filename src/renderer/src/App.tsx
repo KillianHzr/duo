@@ -6,7 +6,7 @@ import { t, type MessageKey } from './i18n'
 import { Chat } from './Chat'
 import { Notes } from './Notes'
 import { FACES, chosenFace, faceOf } from './avatars'
-import { Avatar, Icon } from './icons'
+import { AppIcon, Avatar, Icon } from './icons'
 import type { Space } from './space'
 import type { Levels, PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
 
@@ -38,7 +38,7 @@ export function App({ engine, space }: { engine: VoiceEngine; space: Space }) {
   return (
     <>
       <div className="titlebar">
-        <span className="logo" />
+        <AppIcon className="logo" />
         Peinard
       </div>
       <Main engine={engine} space={space} />
@@ -661,7 +661,7 @@ function Settings(props: {
 }
 
 function Brand() {
-  return <div className="brand" aria-hidden />
+  return <AppIcon className="brand" />
 }
 
 function NameForm({ onSubmit }: { onSubmit: (name: string) => void }) {

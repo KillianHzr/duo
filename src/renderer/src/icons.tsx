@@ -91,3 +91,22 @@ export function Avatar({ name, pick, speaking }: { name: string; pick?: number |
 
 /** The colour index of someone's name in the chat. */
 export const hue = (name: string): number => hash(name) % 6
+
+/** The app's own icon: Mousse, dozing. Kept in step with scripts/make-icon.mjs. */
+export function AppIcon({ className }: { className: string }) {
+  return (
+    <svg className={className} viewBox="0 0 100 100" aria-hidden>
+      <rect width="100" height="100" rx="24" fill="#6e916d" />
+      <path d="M0 24 Q0 0 24 0 H76 Q100 0 100 24 V44 Q88 29 75 42 Q63 54 50 42 Q37 30 25 42 Q12 54 0 44 Z" fill="#93b38b" />
+      <path d="M23 63 A11 11 0 0 0 45 63 M55 63 A11 11 0 0 0 77 63" fill="none" stroke="#1c1d20" strokeWidth="6.5" strokeLinecap="round" />
+      <g fill="#f3ead9">
+        <circle cx="76" cy="12" r="6.6" />
+        <circle cx="67.8" cy="18" r="6.6" />
+        <circle cx="70.9" cy="27.6" r="6.6" />
+        <circle cx="81.1" cy="27.6" r="6.6" />
+        <circle cx="84.2" cy="18" r="6.6" />
+      </g>
+      <circle cx="76" cy="20.5" r="5.4" fill="#f2b866" />
+    </svg>
+  )
+}

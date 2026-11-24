@@ -119,8 +119,8 @@ a {
 
 .logo,
 .brand {
-  border-radius: 30%;
-  background: var(--accent);
+  display: block;
+  flex-shrink: 0;
 }
 
 .logo {
