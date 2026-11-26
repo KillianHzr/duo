@@ -3,6 +3,7 @@ import type { AppState } from '../main/index'
 import type { CloseAction } from '../main/config'
 import type { UpdateStatus } from '../main/updater'
 import type { PttBinding } from '../shared/keys'
+import type { LinkPreview } from '../main/link-preview'
 
 export interface E2EConfig {
   name: string
@@ -51,6 +52,10 @@ const api = {
     ipcRenderer.on('duo:state-changed', handler)
     return () => ipcRenderer.removeListener('duo:state-changed', handler)
   },
+  /** Title, text and picture of a web page linked in the chat, or null when it has none. */
+  linkPreview: (url: string): Promise<LinkPreview | null> => ipcRenderer.invoke('duo:link-preview', url),
+  /** Follows the theme: the colour behind the page and of the window buttons. */
+  setWindowColors: (background: string, symbols: string): void => ipcRenderer.send('duo:window-colors', background, symbols),
   /** Saves a file from the chat to a place the user picks. */
   download: (url: string): void => ipcRenderer.send('duo:download', url),
 
@@ -77,6 +82,6 @@ const api = {
 }
 
 export type DuoApi = typeof api
-export type { AppState, CloseAction, UpdateStatus }
+export type { AppState, CloseAction, LinkPreview, UpdateStatus }
 
 contextBridge.exposeInMainWorld('duo', api)

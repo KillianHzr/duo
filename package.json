@@ -92,6 +92,7 @@
     "electron": "^41.7.1",
     "electron-builder": "^26.18.0",
     "electron-vite": "^3.1.0",
+    "pdfjs-dist": "^5.4.624",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "tsx": "^4.23.15",

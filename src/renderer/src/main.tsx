@@ -5,6 +5,7 @@ import { Space } from './space'
 import { DEFAULT_SETTINGS, VoiceEngine, type VoiceSettings } from './voice'
 import '@fontsource-variable/manrope'
 import './styles.css'
+import './theme'
 
 function loadSettings(): VoiceSettings {
   try {

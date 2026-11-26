@@ -14,6 +14,13 @@ export interface DuoConfig {
   /** Host only: folder that receives a daily copy of the data. Empty means no backup. */
   backupDir: string
   lastBackup: BackupResult | null
+  /** Colours of the window behind the page and of its system buttons, following the chosen theme. */
+  windowColors: WindowColors
+}
+
+export interface WindowColors {
+  background: string
+  symbols: string
 }
 
 export type CloseAction = 'ask' | 'tray' | 'quit'
@@ -24,7 +31,15 @@ export interface BackupResult {
   error: string | null
 }
 
-export const DEFAULTS: DuoConfig = { role: null, code: '', closeAction: 'ask', dataDir: '', backupDir: '', lastBackup: null }
+export const DEFAULTS: DuoConfig = {
+  role: null,
+  code: '',
+  closeAction: 'ask',
+  dataDir: '',
+  backupDir: '',
+  lastBackup: null,
+  windowColors: { background: '#1c1d20', symbols: '#9c9da6' }
+}
 
 const file = (): string => join(app.getPath('userData'), 'config.json')
 

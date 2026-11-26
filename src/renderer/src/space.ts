@@ -1,4 +1,5 @@
 import type { ChatMessage, ClientMessage, FileRef, Note, NoteDraft, ServerMessage } from '../../shared/protocol'
+import { readSearch, type DateSpan } from './dates'
 import { MAX_FILES_PER_MESSAGE } from '../../shared/protocol'
 
 /** What the chat and the notes need from the voice connection they share. */
@@ -16,13 +17,31 @@ export interface UploadView {
   failed: boolean
 }
 
+export interface SearchView {
+  /** The words searched, without the date. */
+  words: string
+  /** The date found in the search, if any. */
+  date: DateSpan | null
+  /** Null while the host has not answered yet. */
+  results: ChatMessage[] | null
+  total: number
+}
+
 export interface SpaceSnapshot {
   /** True when connected to a host that keeps messages and notes. */
   available: boolean
+  /** The page of the conversation on screen: the latest messages, or older ones someone jumped to. */
   messages: ChatMessage[]
   /** True when older messages can still be loaded. */
   more: boolean
   loadingOlder: boolean
+  /** True when the page on screen is not the end of the conversation (after a jump). */
+  newer: boolean
+  loadingNewer: boolean
+  pins: ChatMessage[]
+  search: SearchView | null
+  /** The message to bring into view and highlight, with a counter so the same one can be asked twice. */
+  focus: { id: string; seq: number } | null
   notes: Note[]
   /** Messages received while the chat was not on screen. */
   unread: number
@@ -69,6 +88,16 @@ export class Space {
   private messages: ChatMessage[] = []
   private more = false
   private loadingOlder = false
+  private newer = false
+  private loadingNewer = false
+  private pins: ChatMessage[] = []
+  private search: SearchView | null = null
+  private focus: { id: string; seq: number } | null = null
+  private focusSeq = 0
+  /** A jump waiting for its page: the id to focus once it arrives. */
+  private pendingFocus: string | null = null
+  /** A jump to a date waiting for its page. */
+  private pendingDate: number | null = null
   private notes = new Map<string, Note>()
   private unread = 0
   private uploads: UploadView[] = []
@@ -92,6 +121,11 @@ export class Space {
       messages: this.messages,
       more: this.more,
       loadingOlder: this.loadingOlder,
+      newer: this.newer,
+      loadingNewer: this.loadingNewer,
+      pins: this.pins,
+      search: this.search,
+      focus: this.focus,
       notes: sortNotes([...this.notes.values()]),
       unread: this.unread,
       uploads: this.uploads
@@ -110,24 +144,67 @@ export class Space {
       case 'welcome':
         this.token = message.token ?? null
         break
-      case 'chat-history':
+      case 'chat-history': {
+        const known = new Set(this.messages.map((m) => m.id))
+        const fresh = message.messages.filter((m) => !known.has(m.id))
         if (message.before) {
-          const known = new Set(this.messages.map((m) => m.id))
-          this.messages = [...message.messages.filter((m) => !known.has(m.id)), ...this.messages]
+          this.messages = [...fresh, ...this.messages]
+          this.more = message.more
           this.loadingOlder = false
+        } else if (message.after) {
+          this.messages = [...this.messages, ...fresh]
+          this.newer = Boolean(message.newer)
+          this.loadingNewer = false
         } else {
+          // The latest page, or the page around a message someone jumped to.
           this.messages = message.messages
+          this.more = message.more
+          this.newer = Boolean(message.newer)
+          this.loadingOlder = this.loadingNewer = false
+          if (this.pendingFocus && this.messages.some((m) => m.id === this.pendingFocus)) {
+            this.focus = { id: this.pendingFocus, seq: ++this.focusSeq }
+          }
+          if (this.pendingDate !== null) {
+            // The first message of the day asked for, or the last one before it when that day was quiet.
+            const target = this.messages.find((m) => m.at >= this.pendingDate!) ?? this.messages[this.messages.length - 1]
+            if (target) this.focus = { id: target.id, seq: ++this.focusSeq }
+          }
+          this.pendingFocus = null
+          this.pendingDate = null
         }
-        this.more = message.more
         break
+      }
       case 'chat-message':
         if (this.messages.some((m) => m.id === message.message.id)) return
-        this.messages = [...this.messages, message.message]
+        // While reading an older page, new messages wait at the end of the conversation.
+        if (!this.newer) this.messages = [...this.messages, message.message]
         if (!this.chatVisible || document.visibilityState !== 'visible') this.unread++
         break
-      case 'chat-deleted':
-        this.messages = this.messages.filter((m) => m.id !== message.id)
+      case 'chat-updated': {
+        const next = message.message
+        const swap = (list: ChatMessage[]): ChatMessage[] => list.map((m) => (m.id === next.id ? next : m))
+        this.messages = swap(this.messages)
+        this.pins = swap(this.pins)
+        if (this.search?.results) this.search = { ...this.search, results: swap(this.search.results) }
         break
+      }
+      case 'chat-pins':
+        this.pins = message.messages
+        break
+      case 'chat-search': {
+        const asked = this.search
+        // Only the answer to the search on screen counts; an older one may arrive late.
+        if (!asked || asked.words !== message.query || asked.date?.from !== message.from || asked.date?.to !== message.to) return
+        this.search = { ...asked, results: message.messages, total: message.total }
+        break
+      }
+      case 'chat-deleted': {
+        const keep = (list: ChatMessage[]): ChatMessage[] => list.filter((m) => m.id !== message.id)
+        this.messages = keep(this.messages)
+        this.pins = keep(this.pins)
+        if (this.search?.results) this.search = { ...this.search, results: keep(this.search.results) }
+        break
+      }
       case 'notes':
         this.notes = new Map(message.notes.map((note) => [note.id, note]))
         break
@@ -146,7 +223,7 @@ export class Space {
   disconnected(): void {
     if (this.token === null) return
     this.token = null
-    this.loadingOlder = false
+    this.loadingOlder = this.loadingNewer = false
     this.emit()
   }
 
@@ -172,12 +249,70 @@ export class Space {
     this.emit()
   }
 
+  /** Loads the messages after the page on screen, when reading an older part of the conversation. */
+  loadNewer(): void {
+    if (this.loadingNewer || !this.newer || !this.messages.length) return
+    this.loadingNewer = true
+    this.link.send({ type: 'chat-history', after: this.messages[this.messages.length - 1].id })
+    this.emit()
+  }
+
+  /** Goes back to the end of the conversation. */
+  backToLatest(): void {
+    this.link.send({ type: 'chat-history' })
+  }
+
+  /** Brings a message into view, loading the part of the conversation around it if needed. */
+  jumpTo(id: string): void {
+    if (this.messages.some((m) => m.id === id)) {
+      this.focus = { id, seq: ++this.focusSeq }
+      this.emit()
+      return
+    }
+    this.pendingFocus = id
+    this.link.send({ type: 'chat-history', around: id })
+  }
+
   deleteMessage(id: string): void {
     this.link.send({ type: 'chat-delete', id })
   }
 
+  editMessage(id: string, text: string): void {
+    this.link.send({ type: 'chat-edit', id, text })
+  }
+
+  react(id: string, emoji: string): void {
+    this.link.send({ type: 'chat-react', id, emoji })
+  }
+
+  pin(id: string, pinned: boolean): void {
+    this.link.send({ type: 'chat-pin', id, pinned })
+  }
+
+  /** Brings the start of a day into view (midnight of that day, in milliseconds). */
+  jumpToDate(date: number): void {
+    this.pendingDate = date
+    this.link.send({ type: 'chat-history', date })
+  }
+
+  /**
+   * Searches every message the host keeps. A date in the search ("12/11", "12 novembre", "hier")
+   * keeps the messages of that day or month. An empty search closes it.
+   */
+  searchMessages(query: string): void {
+    const { words, date } = readSearch(query)
+    if (!words && !date) {
+      this.search = null
+    } else {
+      const same = this.search && this.search.words === words && this.search.date?.from === date?.from
+      this.search = { words, date, results: same ? this.search!.results : null, total: same ? this.search!.total : 0 }
+      this.link.send({ type: 'chat-search', query: words, from: date?.from, to: date?.to })
+    }
+    this.emit()
+  }
+
   /** Uploads the files to the host, then posts the message. Returns false if a file failed. */
-  async sendMessage(text: string, files: File[]): Promise<boolean> {
+  async sendMessage(text: string, files: File[], replyTo?: string): Promise<boolean> {
     const ids: string[] = []
     let ok = true
     for (const file of files.slice(0, MAX_FILES_PER_MESSAGE)) {
@@ -207,7 +342,7 @@ export class Space {
         update({ failed: true })
       }
     }
-    if (text.trim() || ids.length) this.link.send({ type: 'chat-send', text, files: ids })
+    if (text.trim() || ids.length) this.link.send({ type: 'chat-send', text, files: ids, replyTo })
     return ok
   }
 

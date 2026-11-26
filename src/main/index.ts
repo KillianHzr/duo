@@ -6,6 +6,7 @@ import { moveData, runBackup } from './backup'
 import { discoverServers } from './discovery'
 import { setPushToTalk, stopPushToTalk } from './ptt'
 import { DEFAULTS, loadConfig, saveConfig, type BackupResult, type CloseAction, type DuoConfig } from './config'
+import { linkPreview } from './link-preview'
 import { getUpdateStatus, installUpdateNow, noteInstallAttempt, probeUpdate, startAutoUpdate } from './updater'
 import { generateCode, startDuoServer, type DuoServer } from '../server/duo-server'
 import { DUO_PORT, normalizeCode } from '../shared/protocol'
@@ -194,10 +195,10 @@ function createWindow(): void {
     icon: makeIcon(64),
     skipTaskbar: Boolean(e2e?.ui),
     focusable: !e2e?.ui,
-    backgroundColor: '#1c1d20',
+    backgroundColor: config.windowColors.background,
     // On Windows the page draws the title bar, under the system's own window buttons.
     ...(process.platform === 'win32'
-      ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: '#1c1d20', symbolColor: '#9c9da6', height: 36 } }
+      ? { titleBarStyle: 'hidden' as const, titleBarOverlay: { color: config.windowColors.background, symbolColor: config.windowColors.symbols, height: 36 } }
       : {}),
     autoHideMenuBar: true,
     webPreferences: {
@@ -385,6 +386,19 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('duo:update-status', () => getUpdateStatus())
+  // The theme decides the colour behind the page and of the window buttons Windows draws over it.
+  ipcMain.on('duo:window-colors', (_event, background: unknown, symbols: unknown) => {
+    const hex = /^#[0-9a-f]{6}$/i
+    if (typeof background !== 'string' || typeof symbols !== 'string' || !hex.test(background) || !hex.test(symbols)) return
+    if (config.windowColors.background === background && config.windowColors.symbols === symbols) return
+    config.windowColors = { background, symbols }
+    saveConfig(config)
+    mainWindow?.setBackgroundColor(background)
+    if (process.platform === 'win32') mainWindow?.setTitleBarOverlay({ color: background, symbolColor: symbols, height: 36 })
+  })
+
+  ipcMain.handle('duo:link-preview', (_event, url: unknown) => linkPreview(url))
+
   ipcMain.on('duo:open-releases', () => {
     void shell.openExternal('https://github.com/KillianHzr/duo/releases/latest')
   })
@@ -416,11 +430,13 @@ if (process.env.DUO_PROBE_UPDATE) {
 
   void app.whenReady().then(async () => {
     // Only the microphone is allowed; any other permission request is denied.
+    // The microphone, and writing to the clipboard (the copy buttons). Nothing else.
+    const allowed = ['media', 'speaker-selection', 'clipboard-sanitized-write']
     session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => {
-      callback(permission === 'media')
+      callback(allowed.includes(permission))
     })
     session.defaultSession.setPermissionCheckHandler((_wc, permission) => {
-      return ['media', 'speaker-selection'].includes(permission as string)
+      return allowed.includes(permission as string)
     })
 
     if (!e2e) {

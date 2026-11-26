@@ -8,6 +8,7 @@ import { Notes } from './Notes'
 import { FACES, chosenFace, faceOf } from './avatars'
 import { AppIcon, Avatar, Icon } from './icons'
 import type { Space } from './space'
+import { MODES, SWATCHES, THEMES, getAppearance, setAppearance, subscribeAppearance } from './theme'
 import type { Levels, PeerStats, PeerView, VoiceEngine, VoiceError } from './voice'
 
 type Panel = 'chat' | 'notes'
@@ -38,7 +39,7 @@ export function App({ engine, space }: { engine: VoiceEngine; space: Space }) {
   return (
     <>
       <div className="titlebar">
-        <AppIcon className="logo" />
+        <AppIcon className="logo" small />
         Peinard
       </div>
       <Main engine={engine} space={space} />
@@ -449,7 +450,7 @@ function Together() {
   return <>{t('together', { time })}</>
 }
 
-type SettingsSection = 'voice' | 'app' | 'host'
+type SettingsSection = 'voice' | 'look' | 'app' | 'host'
 
 function Settings(props: {
   engine: VoiceEngine
@@ -473,6 +474,7 @@ function Settings(props: {
   const isHost = app.role === 'host'
   const sections: [SettingsSection, MessageKey][] = [
     ['voice', 'settingsVoice'],
+    ['look', 'settingsLook'],
     ['app', 'settingsApp'],
     ...(isHost ? ([['host', 'settingsHost']] as [SettingsSection, MessageKey][]) : [])
   ]
@@ -597,6 +599,8 @@ function Settings(props: {
             </>
           )}
 
+          {section === 'look' && <Appearance />}
+
           {section === 'app' && (
             <>
               <h2>{t('yourFace')}</h2>
@@ -657,6 +661,37 @@ function Settings(props: {
         </div>
       </div>
     </div>
+  )
+}
+
+/** The colour and the light or dark mode of the app. */
+function Appearance() {
+  const { theme, mode } = useSyncExternalStore(subscribeAppearance, getAppearance)
+  return (
+    <>
+      <h2>{t('themeColor')}</h2>
+      <div className="theme-grid">
+        {THEMES.map((id) => (
+          <button
+            key={id}
+            className={theme === id ? 'theme-swatch active' : 'theme-swatch'}
+            aria-pressed={theme === id}
+            onClick={() => setAppearance({ theme: id })}
+          >
+            <span className="swatch" style={{ background: `linear-gradient(135deg, ${SWATCHES[id][0]} 50%, ${SWATCHES[id][1]} 50%)` }} />
+            {t(`theme_${id}`)}
+          </button>
+        ))}
+      </div>
+      <h2>{t('themeMode')}</h2>
+      <div className="segmented" role="radiogroup" aria-label={t('themeMode')}>
+        {MODES.map((id) => (
+          <button key={id} role="radio" aria-checked={mode === id} className={mode === id ? 'active' : ''} onClick={() => setAppearance({ mode: id })}>
+            {t(`mode_${id}`)}
+          </button>
+        ))}
+      </div>
+    </>
   )
 }
 

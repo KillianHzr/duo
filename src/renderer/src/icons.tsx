@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { faceOf, hash } from './avatars'
 
 const PATHS = {
@@ -56,7 +56,29 @@ const PATHS = {
       <path d="M5 15V6a2 2 0 0 1 2-2h9" />
     </>
   ),
-  check: <path d="M5 12.5l4.5 4.5L19 7.5" />
+  check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  reply: <path d="M10 8L5 12l5 4M5 12h9a5 5 0 0 1 5 5v1" />,
+  smile: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M8.5 14a4.5 4.5 0 0 0 7 0M9.5 9.5v.5M14.5 9.5v.5" />
+    </>
+  ),
+  edit: <path d="M5 19l1-4L16 5l3 3L9 18zM14 7l3 3" />,
+  search: (
+    <>
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-4.5-4.5" />
+    </>
+  ),
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  calendar: (
+    <>
+      <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" />
+      <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
+    </>
+  ),
+  external: <path d="M14 5h5v5M19 5l-8 8M17 14v5H5V7h5" />
 } satisfies Record<string, ReactNode>
 
 export type IconName = keyof typeof PATHS
@@ -92,21 +114,31 @@ export function Avatar({ name, pick, speaking }: { name: string; pick?: number |
 /** The colour index of someone's name in the chat. */
 export const hue = (name: string): number => hash(name) % 6
 
-/** The app's own icon: Mousse, dozing. Kept in step with scripts/make-icon.mjs. */
-export function AppIcon({ className }: { className: string }) {
+/**
+ * The app's own icon: the p of peinard lying on its back, leaning back. Kept in step with
+ * scripts/make-icon.mjs. `small` is the heavier drawing used at 24 px and below.
+ */
+export function AppIcon({ className, small = false }: { className: string; small?: boolean }) {
+  const id = useId()
+  const w = small ? 17 : 13
+  const tilt = 'rotate(12 50 54)'
   return (
     <svg className={className} viewBox="0 0 100 100" aria-hidden>
-      <rect width="100" height="100" rx="24" fill="#6e916d" />
-      <path d="M0 24 Q0 0 24 0 H76 Q100 0 100 24 V44 Q88 29 75 42 Q63 54 50 42 Q37 30 25 42 Q12 54 0 44 Z" fill="#93b38b" />
-      <path d="M23 63 A11 11 0 0 0 45 63 M55 63 A11 11 0 0 0 77 63" fill="none" stroke="#1c1d20" strokeWidth="6.5" strokeLinecap="round" />
-      <g fill="#f3ead9">
-        <circle cx="76" cy="12" r="6.6" />
-        <circle cx="67.8" cy="18" r="6.6" />
-        <circle cx="70.9" cy="27.6" r="6.6" />
-        <circle cx="81.1" cy="27.6" r="6.6" />
-        <circle cx="84.2" cy="18" r="6.6" />
+      <defs>
+        <linearGradient id={`${id}fill`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#c3304f" />
+          <stop offset="1" stopColor="#7a1530" />
+        </linearGradient>
+        <clipPath id={`${id}disc`}>
+          <circle cx="50" cy="50" r="46" />
+        </clipPath>
+      </defs>
+      <circle cx="50" cy="50" r="46" fill={`url(#${id}fill)`} />
+      <g clipPath={`url(#${id}disc)`}>
+        <circle cx="50" cy="50.8" r="45.4" fill="none" stroke="#ffffff" strokeOpacity="0.18" strokeWidth="1.6" />
+        <path d="M31 72 H130" transform={tilt} stroke="#ffe9d6" strokeWidth={w} strokeLinecap="round" />
       </g>
-      <circle cx="76" cy="20.5" r="5.4" fill="#f2b866" />
+      <circle cx="48" cy={72 - 17.5 - w / 2} r="17.5" transform={tilt} fill="none" stroke="#ffe9d6" strokeWidth={w} />
     </svg>
   )
 }

@@ -344,6 +344,7 @@ export function startDuoServer(options: DuoServerOptions): Promise<DuoServer> {
         if (store) {
           tokens.set(token, client)
           send(socket, { type: 'chat-history', ...store.history() })
+          send(socket, { type: 'chat-pins', messages: store.pins() })
           send(socket, { type: 'notes', notes: store.notes() })
         }
         clients.set(client.info.id, client)
@@ -380,19 +381,53 @@ export function startDuoServer(options: DuoServerOptions): Promise<DuoServer> {
             files.push(upload.ref)
           }
           if (!text && !files.length) break
-          broadcast({ type: 'chat-message', message: store.addMessage(client.info.name, text, files) })
+          const replyTo = msg.replyTo ? String(msg.replyTo) : undefined
+          broadcast({ type: 'chat-message', message: store.addMessage(client.info.name, text, files, replyTo) })
           break
         }
         case 'chat-delete': {
-          if (store?.deleteMessage(String(msg.id), client.info.name)) {
+          if (!store) break
+          const wasPinned = store.pins().some((m) => m.id === String(msg.id))
+          if (store.deleteMessage(String(msg.id), client.info.name)) {
             broadcast({ type: 'chat-deleted', id: String(msg.id) })
+            if (wasPinned) broadcast({ type: 'chat-pins', messages: store.pins() })
           }
+          break
+        }
+        case 'chat-edit': {
+          const message = store?.editMessage(String(msg.id), client.info.name, String(msg.text ?? ''))
+          if (message) broadcast({ type: 'chat-updated', message })
+          break
+        }
+        case 'chat-react': {
+          const message = store?.react(String(msg.id), client.info.name, String(msg.emoji ?? ''))
+          if (message) broadcast({ type: 'chat-updated', message })
+          break
+        }
+        case 'chat-pin': {
+          const message = store?.pin(String(msg.id), client.info.name, Boolean(msg.pinned))
+          if (!message || !store) break
+          broadcast({ type: 'chat-updated', message })
+          broadcast({ type: 'chat-pins', messages: store.pins() })
           break
         }
         case 'chat-history': {
           if (!store) break
-          const before = msg.before ? String(msg.before) : undefined
-          send(socket, { type: 'chat-history', ...store.history(before), before })
+          const at = {
+            before: msg.before ? String(msg.before) : undefined,
+            after: msg.after ? String(msg.after) : undefined,
+            around: msg.around ? String(msg.around) : undefined,
+            date: Number.isFinite(msg.date) ? Number(msg.date) : undefined
+          }
+          send(socket, { type: 'chat-history', ...store.history(at), ...at })
+          break
+        }
+        case 'chat-search': {
+          if (!store) break
+          const query = String(msg.query ?? '')
+          const from = Number.isFinite(msg.from) ? Number(msg.from) : undefined
+          const to = Number.isFinite(msg.to) ? Number(msg.to) : undefined
+          send(socket, { type: 'chat-search', query, from, to, ...store.search(query, from, to) })
           break
         }
         case 'note-save': {

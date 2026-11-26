@@ -15,13 +15,127 @@
   /* Reserved for the ring around whoever is talking: nothing else uses it. */
   --voice: #ffd23f;
   --warn: #f0c36a;
-  --danger: #ed5d5f;
+  /* Alerts and "off" states (muted mic, sound off, errors) use the bordeaux of the icon. */
+  --danger: #b3264a;
+  --on-danger: #fff;
+  --danger-text: #f2849a;
+  /* The colour of each person's name in the chat. */
+  --name-0: #ffb88c;
+  --name-1: #f3d08a;
+  --name-2: #b3dba0;
+  --name-3: #a3cfe8;
+  --name-4: #cdbcf3;
+  --name-5: #f3aec6;
+  /* Wells inside a raised surface, such as the fields of a note being edited. */
+  --sunk: rgb(0 0 0 / 22%);
   --radius: 14px;
   --radius-l: 22px;
   color-scheme: dark;
   font-family: 'Manrope Variable', 'Segoe UI', system-ui, sans-serif;
   font-size: 14.5px;
   -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * Themes: a colour (neutral by default) and a light or dark mode, set on <html> by theme.ts.
+ * A colour only tints the surfaces and the text; actions stay off-white in the dark and ink in the light,
+ * and yellow stays for whoever is talking.
+ */
+:root[data-theme='bordeaux'] {
+  --bg-0: #181316;
+  --bg-1: #211a1d;
+  --bg-2: #2a2025;
+  --bg-3: #35282e;
+  --bg-4: #44333a;
+  --line: rgb(255 233 214 / 9%);
+  --text: #f5ece6;
+  --muted: #a7979c;
+}
+
+:root[data-theme='sapin'] {
+  --bg-0: #121815;
+  --bg-1: #19211d;
+  --bg-2: #202a25;
+  --bg-3: #29352f;
+  --bg-4: #35433c;
+  --line: rgb(226 244 232 / 9%);
+  --text: #eaf1ec;
+  --muted: #93a39a;
+}
+
+:root[data-theme='ocean'] {
+  --bg-0: #11151c;
+  --bg-1: #171d26;
+  --bg-2: #1e2531;
+  --bg-3: #273040;
+  --bg-4: #333d50;
+  --line: rgb(226 234 248 / 9%);
+  --text: #e9eef6;
+  --muted: #929cad;
+}
+
+:root[data-mode='light'] {
+  --bg-0: #ecece8;
+  --bg-1: #f6f6f3;
+  --bg-2: #ffffff;
+  --bg-3: #e2e2dd;
+  --bg-4: #d4d4ce;
+  --line: rgb(0 0 0 / 9%);
+  --text: #1c1d20;
+  --muted: #6b6c74;
+  --accent: #1c1d20;
+  --accent-ink: #f6f6f3;
+  --ok: #2f9a55;
+  --warn: #b07a12;
+  --danger: #a8233f;
+  --danger-text: #a8233f;
+  --name-0: #c2561c;
+  --name-1: #946f00;
+  --name-2: #3f7f2a;
+  --name-3: #2a6c96;
+  --name-4: #6a4fb3;
+  --name-5: #b2406f;
+  --sunk: rgb(0 0 0 / 5%);
+  color-scheme: light;
+}
+
+:root[data-mode='light'][data-theme='bordeaux'] {
+  --bg-0: #f3e9e5;
+  --bg-1: #faf4f1;
+  --bg-2: #fffdfb;
+  --bg-3: #ecdcd6;
+  --bg-4: #e0cac3;
+  --line: rgb(74 20 36 / 10%);
+  --text: #2a1a1f;
+  --muted: #7d6a70;
+  --accent: #2a1a1f;
+  --accent-ink: #faf4f1;
+}
+
+:root[data-mode='light'][data-theme='sapin'] {
+  --bg-0: #e6eee9;
+  --bg-1: #f2f7f3;
+  --bg-2: #fcfefd;
+  --bg-3: #d9e5dd;
+  --bg-4: #c9d9cf;
+  --line: rgb(16 48 32 / 10%);
+  --text: #15241c;
+  --muted: #5f7268;
+  --accent: #15241c;
+  --accent-ink: #f2f7f3;
+}
+
+:root[data-mode='light'][data-theme='ocean'] {
+  --bg-0: #e7edf5;
+  --bg-1: #f3f6fa;
+  --bg-2: #fdfeff;
+  --bg-3: #dae2ed;
+  --bg-4: #cad5e3;
+  --line: rgb(16 32 64 / 10%);
+  --text: #141c28;
+  --muted: #5e6a7c;
+  --accent: #141c28;
+  --accent-ink: #f3f6fa;
 }
 
 * {
@@ -171,7 +285,7 @@ button.primary:hover {
 button.danger,
 .toggle.on {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 
 .toggle.on-accent {
@@ -218,8 +332,8 @@ button.with-icon {
 }
 
 .icon-btn.on {
-  background: color-mix(in srgb, var(--danger) 20%, transparent);
-  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 22%, transparent);
+  color: var(--danger-text);
 }
 
 input:not([type='range']):not([type='checkbox']),
@@ -512,7 +626,7 @@ button.choice:hover {
 
 .error {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 
 .notice button {
@@ -700,7 +814,7 @@ button.person[aria-expanded='true'] .avatar {
   border: 3px solid var(--bg-0);
   border-radius: 50%;
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 
 .flag + .flag {
@@ -861,7 +975,7 @@ input.code-input {
 .dock-btn.on,
 .dock-btn.main.on {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
 }
 
 /* What people share, beside the fire. */
@@ -906,7 +1020,7 @@ input.code-input {
   padding: 0 5px;
   border-radius: 9px;
   background: var(--danger);
-  color: #fff;
+  color: var(--on-danger);
   font-size: 11px;
   font-weight: 700;
   line-height: 18px;
@@ -1036,6 +1150,57 @@ input.code-input {
   }
 }
 
+/* Appearance: one swatch per colour, then dark, light or like Windows. */
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.theme-swatch {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  font-weight: 600;
+}
+
+.theme-swatch.active {
+  box-shadow: inset 0 0 0 2px var(--text);
+}
+
+.swatch {
+  width: 100%;
+  height: 34px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 99px;
+  background: var(--bg-2);
+  align-self: flex-start;
+}
+
+.segmented button {
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: none;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.segmented button.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
 .face-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
@@ -1152,7 +1317,8 @@ input.code-input {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  padding: 8px 14px 12px;
+  padding: 20px 14px 12px;
+  overflow-x: hidden;
   overflow-y: auto;
   overflow-anchor: none;
 }
@@ -1229,14 +1395,26 @@ input.code-input {
 }
 
 .msg {
+  position: relative;
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  margin-top: 12px;
+  margin-top: 8px;
+  padding: 4px 6px;
+  border-radius: 12px;
+  transition: background 0.6s;
 }
 
 .msg.grouped {
-  margin-top: 3px;
+  margin-top: 0;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+
+/* A message reached from a reply, a pin or a search lights up for a moment. */
+.msg.flash {
+  background: color-mix(in srgb, var(--voice) 18%, transparent);
+  transition: none;
 }
 
 /* Your own messages sit on the right, in the accent colour. */
@@ -1257,10 +1435,6 @@ input.code-input {
   color: inherit;
 }
 
-.msg:hover {
-  background: none;
-}
-
 .msg-gutter {
   flex-shrink: 0;
   width: 36px;
@@ -1278,25 +1452,26 @@ input.code-input {
 }
 
 .name-0 {
-  color: #ffb88c;
+  color: var(--name-0);
 }
 .name-1 {
-  color: #f3d08a;
+  color: var(--name-1);
 }
 .name-2 {
-  color: #b3dba0;
+  color: var(--name-2);
 }
 .name-3 {
-  color: #a3cfe8;
+  color: var(--name-3);
 }
 .name-4 {
-  color: #cdbcf3;
+  color: var(--name-4);
 }
 .name-5 {
-  color: #f3aec6;
+  color: var(--name-5);
 }
 
 .msg-content {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -1317,21 +1492,625 @@ input.code-input {
   line-height: 1.45;
 }
 
-.msg-action {
+.edited {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.pinned-tag {
+  display: inline-flex;
   align-self: center;
+}
+
+/* The actions that appear over a message while the pointer is on it, as in most chat apps. */
+.msg-tools {
+  position: absolute;
+  top: -20px;
+  right: -4px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  /* Hidden with a short delay, so the pointer has time to reach it from the bubble. */
+  visibility: hidden;
+  opacity: 0;
+  transition:
+    visibility 0s 0.3s,
+    opacity 0.12s 0.18s;
+  border-radius: 10px;
+  background: var(--bg-2);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 6px 18px rgb(0 0 0 / 25%);
+}
+
+/* Only the message itself (its bubble, files and previews), not the name, the time or the empty space beside it. */
+.msg-content:has(> :is(p, .photo, video, audio, .pdf-card, .file, .link-card, .reactions):hover) > .msg-tools,
+.msg-tools:hover,
+.msg.active .msg-tools,
+.msg-tools:focus-within {
+  visibility: visible;
+  opacity: 1;
+  transition: none;
+}
+
+.tool {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 7px;
   background: none;
+  color: var(--muted);
+}
+
+.tool:hover {
+  background: var(--bg-3);
+  color: var(--text);
+}
+
+.tool.emoji {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.tool.on {
+  color: var(--text);
+}
+
+.tool.danger-tool:hover {
+  background: var(--danger);
+  color: var(--on-danger);
+}
+
+.msg-tools > button.danger {
+  padding: 5px 12px;
+}
+
+.emoji-picker {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 268px;
+  max-height: 300px;
+  padding: 10px;
+  overflow-y: auto;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 12px 30px rgb(0 0 0 / 35%);
+}
+
+.emoji-picker.up {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  margin-bottom: 6px;
+}
+
+.emoji-grid button {
+  height: 30px;
+  padding: 0;
+  border-radius: 7px;
+  background: none;
+  font-size: 19px;
+  line-height: 1;
+}
+
+.emoji-grid button:hover {
+  background: var(--bg-3);
+}
+
+.reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.reaction {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 99px;
+  background: var(--bg-2);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.reaction .emoji {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.reaction.mine {
+  background: color-mix(in srgb, var(--text) 12%, var(--bg-2));
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+.reaction.add {
   opacity: 0;
 }
 
-.msg-action.icon-btn {
+.msg-content:has(> :is(p, .photo, video, audio, .pdf-card, .file, .link-card, .reactions):hover) .reaction.add {
+  opacity: 1;
+}
+
+/* The message a reply answers, shown in one line above it. */
+.msg-quote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0 4px;
+  background: none;
+  color: var(--muted);
+  text-align: left;
+}
+
+.msg-quote span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.msg-quote:hover span {
+  color: var(--text);
+}
+
+.edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(100%, 520px);
+}
+
+.edit-box textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: var(--bg-2);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  font-size: 14.5px;
+  line-height: 1.45;
+  resize: none;
+}
+
+.reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 12px;
+  border-radius: 12px;
+  background: var(--bg-1);
+  color: var(--muted);
+}
+
+.reply-bar .reply-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.reply-bar .icon-btn {
+  width: 26px;
+  height: 26px;
+}
+
+/* Search and pins, above the conversation. */
+.chat-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 14px 6px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 6px 0 12px;
+  border-radius: 99px;
+  background: var(--bg-2);
+  color: var(--muted);
+}
+
+.chat-bar .search-box input[type='search'] {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  outline: none;
+}
+
+.search-box input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-box .icon-btn {
+  width: 24px;
+  height: 24px;
+}
+
+.pins-btn {
+  position: relative;
+}
+
+.pins-btn.active {
+  background: var(--bg-3);
+  color: var(--text);
+}
+
+.pins-btn .count {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 15px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--bg-4);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
+}
+
+.side-list {
+  gap: 6px;
+}
+
+.side-list > :first-child {
+  margin-top: 0;
+}
+
+.list-head {
+  padding: 4px 2px;
+}
+
+.result {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  border-radius: 12px;
+  background: var(--bg-2);
+}
+
+.result-open {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  background: none;
+  text-align: left;
+}
+
+.result-open:hover {
+  background: var(--bg-3);
+}
+
+.result .avatar {
   width: 30px;
   height: 30px;
 }
 
-.msg:hover .msg-action,
-.msg-action:focus-visible,
-.msg-action.danger {
-  opacity: 1;
+.result-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.result-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.result-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.result > .icon-btn {
+  margin: 6px 6px 0 0;
+  width: 28px;
+  height: 28px;
+}
+
+mark {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--voice) 45%, transparent);
+  color: inherit;
+}
+
+.loading-line {
+  align-self: center;
+  padding: 8px;
+  text-align: center;
+}
+
+.to-latest {
+  position: absolute;
+  left: 50%;
+  bottom: 86px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 99px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 30%);
+}
+
+/* A web page linked in a message. */
+.link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: min(100%, 400px);
+  padding: 10px 12px;
+  border-left: 3px solid var(--bg-4);
+  border-radius: 6px 12px 12px 6px;
+  background: var(--bg-1);
+}
+
+.link-card.pending {
+  height: 0;
+  padding: 0;
+  border: 0;
+  visibility: hidden;
+}
+
+.link-title {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link-title:hover {
+  text-decoration: underline;
+}
+
+.link-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.link-image img {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  margin-top: 6px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+/* A PDF: its first page, then its name. */
+.pdf-card {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 320px);
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+}
+
+.pdf-page {
+  display: block;
+  max-height: 240px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0;
+  background: #fff;
+  cursor: zoom-in;
+}
+
+.pdf-page.loading {
+  height: 160px;
+  background: var(--bg-3);
+}
+
+.pdf-page canvas {
+  display: block;
+  width: 100%;
+}
+
+.pdf-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 6px 10px 12px;
+  color: var(--muted);
+}
+
+.pdf-meta > span {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pdf-meta strong {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.pdf-viewer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  background: rgb(0 0 0 / 88%);
+}
+
+.pdf-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: rgb(0 0 0 / 50%);
+  color: #fff;
+}
+
+.pdf-bar strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pdf-bar .icon-btn {
+  color: #fff;
+}
+
+.pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 32px 40px;
+  overflow-y: auto;
+}
+
+.pdf-sheet {
+  flex-shrink: 0;
+  width: min(860px, 100%);
+  min-height: 200px;
+  background: #fff;
+  box-shadow: 0 6px 24px rgb(0 0 0 / 40%);
+}
+
+.pdf-sheet canvas {
+  display: block;
+  width: 100%;
+}
+
+/* Files chosen for the next message, above the box. */
+.attachments {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.pending-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  max-width: 240px;
+  padding: 8px 6px 8px 8px;
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.pending-file img {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.pending-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pending-name strong {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.pending-file .icon-btn {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+/* The calendar of "go to a date": only its picker shows. */
+.date-picker {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 8px;
+  padding: 2px 9px;
+  border-radius: 99px;
+  background: var(--bg-3);
+  color: var(--text);
+}
+
+.file-badge {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--bg-3);
+  color: var(--text);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .photo {
@@ -1391,7 +2170,7 @@ button.file strong {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  color: #ffb9bd;
+  color: var(--danger-text);
 }
 
 .upload .meter > div {
@@ -1520,14 +2299,14 @@ button.note:hover {
   overflow: hidden;
   white-space: pre-wrap;
   line-height: 1.4;
-  color: rgb(255 255 255 / 82%);
+  color: color-mix(in srgb, var(--text) 82%, transparent);
 }
 
 .pin {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: rgb(255 255 255 / 60%);
+  color: color-mix(in srgb, var(--text) 60%, transparent);
 }
 
 .color-0,
@@ -1566,7 +2345,7 @@ button.color-5:hover {
 
 .note-editor input.note-title,
 .note-editor textarea {
-  background: rgb(0 0 0 / 22%);
+  background: var(--sunk);
 }
 
 .note-editor textarea {
@@ -1583,7 +2362,7 @@ button.color-5:hover {
   width: 26px;
   height: 26px;
   padding: 0;
-  border: 2px solid rgb(255 255 255 / 22%);
+  border: 2px solid color-mix(in srgb, var(--text) 22%, transparent);
   border-radius: 50%;
 }
 

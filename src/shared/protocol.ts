@@ -40,6 +40,14 @@ export const MAX_NOTE_LENGTH = 20_000
 export const MAX_TITLE_LENGTH = 200
 export const MAX_FILES_PER_MESSAGE = 10
 export const HISTORY_PAGE = 50
+/** How many search results the host sends back at most. */
+export const SEARCH_LIMIT = 50
+/** Longest search someone can type. */
+export const MAX_SEARCH_LENGTH = 100
+/** How many different emoji a message can carry. */
+export const MAX_REACTIONS = 20
+/** The start of a message that a reply quotes. */
+export const REPLY_SNIPPET = 140
 export const NOTE_COLORS = 6
 /** How many built-in faces someone can pick from. */
 export const AVATAR_COUNT = 10
@@ -57,6 +65,16 @@ export interface FileRef {
   height?: number
 }
 
+/** The message a reply answers, as it was when the reply was sent. */
+export interface ReplyRef {
+  id: string
+  from: string
+  /** The start of its text. */
+  text: string
+  /** How many files it carried. */
+  files: number
+}
+
 export interface ChatMessage {
   id: string
   /** Milliseconds since 1970, on the host's clock. */
@@ -64,6 +82,12 @@ export interface ChatMessage {
   from: string
   text: string
   files: FileRef[]
+  replyTo?: ReplyRef
+  /** Emoji → names of the people who reacted with it, in the order they did. */
+  reactions?: Record<string, string[]>
+  pinned?: { by: string; at: number }
+  /** When its author last changed its text. */
+  editedAt?: number
 }
 
 export interface Note {
@@ -83,10 +107,20 @@ export type ClientMessage =
   | { type: 'hello'; name: string; code: string; protocol: number; avatar?: number }
   | { type: 'signal'; to: string; data: SignalData }
   | { type: 'state'; muted: boolean; deafened: boolean }
-  | { type: 'chat-send'; text: string; files: string[] }
+  | { type: 'chat-send'; text: string; files: string[]; replyTo?: string }
   | { type: 'chat-delete'; id: string }
-  /** Asks for the page of messages older than `before` (or the latest page). */
-  | { type: 'chat-history'; before?: string }
+  /** Only the author can change the text of a message. */
+  | { type: 'chat-edit'; id: string; text: string }
+  /** Adds the emoji from this person, or takes it back if they had already added it. */
+  | { type: 'chat-react'; id: string; emoji: string }
+  | { type: 'chat-pin'; id: string; pinned: boolean }
+  /**
+   * Asks for a page of messages: older than `before`, newer than `after`, around `around`,
+   * starting at the first message sent from `date` on (milliseconds), or the latest ones.
+   */
+  | { type: 'chat-history'; before?: string; after?: string; around?: string; date?: number }
+  /** Words to find; `from`/`to` (milliseconds) keep only the messages sent in that span. */
+  | { type: 'chat-search'; query: string; from?: number; to?: number }
   | { type: 'note-save'; note: NoteDraft }
   | { type: 'note-delete'; id: string }
 
@@ -102,7 +136,22 @@ export type ServerMessage =
   | { type: 'signal'; from: string; data: SignalData }
   | { type: 'chat-message'; message: ChatMessage }
   | { type: 'chat-deleted'; id: string }
-  | { type: 'chat-history'; messages: ChatMessage[]; more: boolean; before?: string }
+  /** A message whose text, reactions or pin changed. */
+  | { type: 'chat-updated'; message: ChatMessage }
+  /** Every pinned message, newest pin first. */
+  | { type: 'chat-pins'; messages: ChatMessage[] }
+  /** `more`: older messages exist; `newer`: newer messages exist beyond this page. */
+  | {
+      type: 'chat-history'
+      messages: ChatMessage[]
+      more: boolean
+      newer?: boolean
+      before?: string
+      after?: string
+      around?: string
+      date?: number
+    }
+  | { type: 'chat-search'; query: string; from?: number; to?: number; messages: ChatMessage[]; total: number }
   | { type: 'notes'; notes: Note[] }
   | { type: 'note-saved'; note: Note }
   | { type: 'note-deleted'; id: string }

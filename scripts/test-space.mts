@@ -147,6 +147,62 @@ try {
   await wait(200)
   const older = a.last('chat-history')!
   check(older.messages.at(-1)?.text === 'n9' && !older.more && older.messages[0].text === 'hello https://example.com', 'older pages follow')
+  check(latest.newer === false && older.newer === true, 'a page says whether newer messages follow it')
+  const n30 = latest.messages.find((m) => m.text === 'n30')!
+  a.send({ type: 'chat-history', around: n30.id })
+  await wait(200)
+  const around = a.last('chat-history')!
+  check(around.around === n30.id && around.messages.some((m) => m.id === n30.id) && around.newer === true, 'a page can be asked around a message')
+  a.send({ type: 'chat-history', after: around.messages.at(-1)!.id })
+  await wait(200)
+  const after = a.last('chat-history')!
+  check(after.messages.at(-1)?.text === 'n59' && after.newer === false, 'newer pages follow')
+
+  // ----- Replies, edits, reactions, pins, search -----
+  const target = latest.messages.at(-1)!
+  a.send({ type: 'chat-send', text: 'je réponds', files: [], replyTo: target.id })
+  await wait(200)
+  const reply = b.last('chat-message')!.message
+  check(reply.replyTo?.id === target.id && reply.replyTo.from === 'Bob' && reply.replyTo.text === 'n59', 'a reply quotes the message it answers')
+  a.send({ type: 'chat-edit', id: reply.id, text: 'je réponds, modifié' })
+  b.send({ type: 'chat-edit', id: reply.id, text: 'pas à moi' })
+  await wait(200)
+  const updates = b.inbox.filter((m) => m.type === 'chat-updated')
+  check(updates.length === 1 && updates[0].type === 'chat-updated' && updates[0].message.text === 'je réponds, modifié' && Boolean(updates[0].message.editedAt), 'only the author can change a message')
+  b.send({ type: 'chat-react', id: reply.id, emoji: '👍' })
+  a.send({ type: 'chat-react', id: reply.id, emoji: '👍' })
+  a.send({ type: 'chat-react', id: reply.id, emoji: '👍🏽' })
+  a.send({ type: 'chat-react', id: reply.id, emoji: 'hello' })
+  await wait(200)
+  let reacted = a.last('chat-updated')!.message
+  check(JSON.stringify(reacted.reactions) === JSON.stringify({ '👍': ['Bob', 'Alice'], '👍🏽': ['Alice'] }), 'reactions add up per emoji; text is refused')
+  a.send({ type: 'chat-react', id: reply.id, emoji: '👍🏽' })
+  await wait(200)
+  reacted = a.last('chat-updated')!.message
+  check(!('👍🏽' in (reacted.reactions ?? {})), 'reacting again takes it back')
+  b.send({ type: 'chat-pin', id: reply.id, pinned: true })
+  await wait(200)
+  check(a.last('chat-pins')?.messages[0]?.id === reply.id && a.last('chat-updated')!.message.pinned?.by === 'Bob', 'pinning is shared with everyone')
+  a.send({ type: 'chat-search', query: 'REPONDS modifie' })
+  await wait(200)
+  const found = a.last('chat-search')!
+  check(found.total === 1 && found.messages[0].id === reply.id, 'search ignores case and accents and needs every word')
+  a.send({ type: 'chat-search', query: 'n5' })
+  await wait(200)
+  check(a.last('chat-search')!.messages[0].text === 'n59', 'search shows the newest matches first')
+  const pinnedId = reply.id
+  const now = Date.now()
+  a.send({ type: 'chat-search', query: '', from: now - 60_000, to: now + 60_000 })
+  await wait(200)
+  const spanned = a.last('chat-search')!
+  check(spanned.total > 60 && spanned.messages.every((m) => m.at >= now - 60_000), 'a search can be only a span of dates')
+  a.send({ type: 'chat-search', query: 'n5', from: now + 60_000 })
+  await wait(200)
+  check(a.last('chat-search')!.total === 0, 'words and dates combine')
+  a.send({ type: 'chat-history', date: reply.at })
+  await wait(200)
+  const day = a.last('chat-history')!
+  check(day.date === reply.at && day.messages.at(-1)?.id === reply.id && day.messages.length === 6 && day.more, 'a page can start at a date, with a few messages before it')
 
   // ----- Notes -----
   a.send({ type: 'note-save', note: { id: 'note-1', title: 'Courses', text: 'lait\npain', color: 2, pinned: true } })
@@ -172,10 +228,13 @@ try {
   server = await startDuoServer({ code: CODE, port: PORT, host: '127.0.0.1', dataDir: dir })
   const c = await connect('Carol')
   const history = c.last('chat-history')!
-  check(history.messages.length === 50 && history.messages.at(-1)?.text === 'n59', 'messages survive a restart')
+  check(history.messages.length === 50 && history.messages.at(-1)?.text === 'je réponds, modifié', 'messages survive a restart')
   c.send({ type: 'chat-history', before: history.messages[0].id })
   await wait(200)
   check(!c.last('chat-history')!.messages.some((m) => m.id === withFile!.id), 'a deleted message stays deleted')
+  const kept = history.messages.find((m) => m.id === pinnedId)
+  check(kept?.text === 'je réponds, modifié' && kept.reactions?.['👍']?.length === 2 && Boolean(kept.pinned), 'edits, reactions and pins survive a restart')
+  check(c.last('chat-pins')?.messages[0]?.id === pinnedId, 'pinned messages are sent on arrival')
   const notes = c.last('notes')!.notes
   check(notes.length === 1 && notes[0].text.endsWith('oeufs'), 'notes survive a restart')
   check((await fetch(`${BASE}/media/${page.id}?t=${c.token}`)).status === 200, 'files survive a restart')
