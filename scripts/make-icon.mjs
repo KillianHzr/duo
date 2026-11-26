@@ -1,25 +1,33 @@
 /**
- * Draws the app icon — Mousse, the moss character, dozing — and writes it in every size the
- * app and its installers need: build/icon.png, the image the window and the tray use, and the
- * images of the Microsoft Store package. Run `npm run icon` after changing the design.
+ * Draws the app icon — the p of peinard lying on its back, leaning back as if rocking on a chair —
+ * and writes it in every size the app and its installers need: build/icon.png, the image the
+ * window and the tray use, and the images of the Microsoft Store package. Run `npm run icon`
+ * after changing the design. The same drawing lives in AppIcon, in src/renderer/src/icons.tsx.
  */
 import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { Resvg } from '@resvg/resvg-js'
 
 const INK = '#1c1d20'
-const CREAM = '#f3ead9'
-const BODY = '#6e916d'
-const MOSS = '#93b38b'
+const CREAM = '#ffe9d6'
+const TOP = '#c3304f'
+const BOTTOM = '#7a1530'
 
-const eye = (x) => `<path d="M${x - 11} 63 A11 11 0 0 0 ${x + 11} 63" fill="none" stroke="${INK}" stroke-width="6.5" stroke-linecap="round"/>`
-const daisy = `<g fill="${CREAM}"><circle cx="76" cy="12" r="6.6"/><circle cx="67.8" cy="18" r="6.6"/><circle cx="70.9" cy="27.6" r="6.6"/><circle cx="81.1" cy="27.6" r="6.6"/><circle cx="84.2" cy="18" r="6.6"/></g><circle cx="76" cy="20.5" r="5.4" fill="#f2b866"/>`
-
-/** The face on a 100×100 canvas. Below 24 px the daisy is only noise, so it is left out. */
-const face = (size) =>
-  `<defs><clipPath id="tile"><rect width="100" height="100" rx="24"/></clipPath></defs>` +
-  `<g clip-path="url(#tile)"><rect width="100" height="100" fill="${BODY}"/>` +
-  `<path d="M-2 -2 H102 V44 Q88 29 75 42 Q63 54 50 42 Q37 30 25 42 Q12 54 -2 44 Z" fill="${MOSS}"/>` +
-  `${eye(34)}${eye(66)}${size >= 24 ? daisy : ''}</g>`
+/**
+ * The icon on a 100×100 canvas: a bordeaux disc with a soft light rim, and the p tilted back 12°,
+ * its leg running off the right edge. At 24 px and below the strokes get heavier so the bowl stays open.
+ */
+const face = (size) => {
+  const w = size <= 24 ? 17 : 13
+  const tilt = 'transform="rotate(12 50 54)"'
+  return (
+    `<defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${TOP}"/><stop offset="1" stop-color="${BOTTOM}"/></linearGradient>` +
+    `<clipPath id="disc"><circle cx="50" cy="50" r="46"/></clipPath></defs>` +
+    `<circle cx="50" cy="50" r="46" fill="url(#fill)"/>` +
+    `<g clip-path="url(#disc)"><circle cx="50" cy="50.8" r="45.4" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.6"/>` +
+    `<path d="M31 72 H130" ${tilt} stroke="${CREAM}" stroke-width="${w}" stroke-linecap="round"/></g>` +
+    `<circle cx="48" cy="${72 - 17.5 - w / 2}" r="17.5" ${tilt} fill="none" stroke="${CREAM}" stroke-width="${w}"/>`
+  )
+}
 
 function png(svg, width) {
   return new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng()
