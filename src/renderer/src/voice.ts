@@ -183,6 +183,8 @@ export class VoiceEngine {
   private error: VoiceError | null = null
   private muted = false
   private deafened = false
+  /** Whether the microphone was already off when the sound was turned off. */
+  private mutedBeforeDeafen = false
   private micDb = SILENCE_DB
   private gateOpen = true
   private testing = false
@@ -600,16 +602,29 @@ export class VoiceEngine {
     this.emit()
   }
 
+  /** Turning the microphone back on while the sound is off turns the sound back on too. */
   setMuted(muted: boolean): void {
     this.muted = muted
+    if (!muted && this.deafened) {
+      this.deafened = false
+      for (const peer of this.peers.values()) peer.audio.muted = false
+    }
     this.applySendState()
     this.sendState()
     this.emit()
   }
 
+  /**
+   * Turning the sound off turns the microphone off with it. Turning the sound back on gives the
+   * microphone back only if it was on before: a microphone turned off by hand stays off.
+   */
   setDeafened(deafened: boolean): void {
+    if (deafened === this.deafened) return
+    if (deafened) this.mutedBeforeDeafen = this.muted
+    this.muted = deafened || this.mutedBeforeDeafen
     this.deafened = deafened
     for (const peer of this.peers.values()) peer.audio.muted = deafened
+    this.applySendState()
     this.sendState()
     this.emit()
   }
