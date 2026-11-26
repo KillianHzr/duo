@@ -26,7 +26,8 @@ The hosting computer only accepts connections from local-network addresses.
 
 ## What is stored on your computer
 
-Your first name, your audio settings, whether you host or join, and the access code. They are kept
+Your first name, your audio settings, the look you picked (colour, light or dark), whether you host or
+join, and the access code. They are kept
 in the app's data folder on your computer and are removed when you uninstall Peinard.
 
 ## Connections to the Internet
@@ -34,8 +35,12 @@ in the app's data folder on your computer and are removed when you uninstall Pei
 - **Installer downloaded from GitHub:** the app asks GitHub whether a newer version exists, and
   downloads it if so. GitHub receives your IP address, as with any download, under
   [GitHub's privacy statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement).
-- **Microsoft Store version:** updates are handled by the Microsoft Store; the app itself makes no
-  Internet connection.
+- **Microsoft Store version:** updates are handled by the Microsoft Store.
+- **Link previews:** when a chat message contains a web address, the app shows that page's title,
+  short description and picture under the message. To get them, your computer asks that website
+  for its page and picture, once the message comes into view, as a browser would when opening the link.
+  The website receives your IP address and the request; nothing else is sent (no cookies, no name,
+  no message text). Addresses on your local network are never contacted this way.
 
 Peinard is not designed to make any other connection to the Internet.
 

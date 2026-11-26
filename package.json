@@ -1,6 +1,6 @@
 {
   "name": "peinard",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": true,
   "description": "Low-latency private voice chat for your local network",
   "author": "KillianHzr",
